@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>訪視行程規劃工具</title>
+<style>
+:root{
+  --ink:#15202a; --ink-2:#48606f; --ink-3:#7d94a1;
+  --paper:#e9eef1; --surface:#fff; --rule:#c7d4db; --rule-soft:#dfe7eb;
+  --teal:#0f6b68; --teal-soft:#e0efee;
+  --sand:#e8dcbd; --sand-ink:#7a6323;
+  --alert:#ab3226; --alert-soft:#fbe9e6;
+  --warn:#9a6b1c; --warn-soft:#fbf1de;
+  --font-ui:"Noto Sans TC","PingFang TC","Heiti TC","Microsoft JhengHei",-apple-system,"Segoe UI",sans-serif;
+  --font-mono:ui-monospace,"SFMono-Regular","Roboto Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1040px;margin:0 auto;padding:20px 18px 90px}
+h1,h2,h3{margin:0}
+.masthead{border-top:3px solid var(--ink);padding-top:13px;margin-bottom:18px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;justify-content:space-between}
+.masthead h1{font-size:22px}
+.masthead .sub{margin:3px 0 0;color:var(--ink-2);font-size:13px}
+.toolbar{display:flex;gap:7px;flex-wrap:wrap}
+button{font-family:inherit;font-size:13px;cursor:pointer}
+.btn{border:1px solid var(--rule);background:var(--surface);color:var(--ink);padding:7px 13px;border-radius:2px;transition:background .12s,border-color .12s}
+.btn:hover{background:var(--teal-soft);border-color:var(--teal)}
+.btn-primary{background:var(--teal);border-color:var(--teal);color:#fff}
+.btn-primary:hover{background:#0b5754;border-color:#0b5754}
+.btn-primary[disabled]{opacity:.55;cursor:default}
+.btn-lg{font-size:15px;padding:11px 24px}
+:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+input,select,textarea{font-family:inherit;font-size:14px;color:var(--ink);border:1px solid var(--rule);background:#fff;border-radius:2px;padding:6px 8px}
+input[type=time],input[type=date],input[type=number]{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+input:focus,select:focus,textarea:focus{border-color:var(--teal);outline:none;box-shadow:0 0 0 2px var(--teal-soft)}
+textarea{width:100%;min-height:130px;line-height:1.7;resize:vertical}
+
+.card{background:var(--surface);border:1px solid var(--rule);margin-bottom:18px}
+.card>header{padding:12px 15px;border-bottom:1px solid var(--rule-soft);display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between}
+.card>header h2{font-size:16px;margin-right:6px}
+.card>header .hint{font-size:12.5px;color:var(--ink-2);flex:1 1 240px}
+.card .body{padding:14px 15px}
+
+.f{display:flex;flex-direction:column;gap:3px}
+.f label{font-size:10.5px;letter-spacing:.14em;color:var(--ink-3);text-transform:uppercase;font-weight:700}
+.grid-f{display:grid;grid-template-columns:repeat(auto-fill,minmax(172px,1fr));gap:11px 14px}
+.grid-f .wide{grid-column:1/-1}
+.f input,.f select{width:100%}
+
+table.grid{width:100%;border-collapse:collapse;font-size:13.5px}
+table.grid th{text-align:left;font-size:10.5px;letter-spacing:.12em;color:var(--ink-3);font-weight:700;padding:4px 6px;border-bottom:1px solid var(--rule)}
+table.grid td{padding:4px;border-bottom:1px solid var(--rule-soft);vertical-align:middle}
+table.grid input[type=text]{width:100%}
+.iconbtn{border:1px solid var(--rule);background:#fff;color:var(--ink-2);width:24px;height:24px;line-height:1;border-radius:2px;padding:0}
+.iconbtn:hover{border-color:var(--teal);color:var(--teal)}
+.iconbtn.del:hover{border-color:var(--alert);color:var(--alert)}
+.scroll{overflow-x:auto}
+.wk{display:flex;gap:2px}
+.wk button{border:1px solid var(--rule);background:#fff;color:var(--ink-3);width:22px;height:22px;padding:0;font-size:11px;border-radius:2px}
+.wk button.on{background:var(--teal-soft);border-color:var(--teal);color:var(--teal);font-weight:700}
+.trainhead{display:flex;align-items:baseline;gap:10px;margin:14px 0 5px}
+.trainhead b{font-size:13.5px}
+.trainhead span{font-size:12px;color:var(--ink-3);flex:1}
+.tiny{font-size:12px;color:var(--ink-3);margin:9px 0 0}
+details.sub{margin-top:12px;border-top:1px solid var(--rule-soft);padding-top:10px}
+details.sub>summary{cursor:pointer;font-size:12.5px;color:var(--teal);list-style:none}
+details.sub>summary::-webkit-details-marker{display:none}
+details.sub>summary::before{content:"▸ "}
+details.sub[open]>summary::before{content:"▾ "}
+.trainstat{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px;font-size:12.5px;color:var(--ink-2)}
+
+.runbar{display:flex;flex-wrap:wrap;gap:14px;align-items:center;padding:15px;background:var(--surface);border:1px solid var(--rule);margin-bottom:18px}
+.status{flex:1 1 260px;font-size:13px;color:var(--ink-2);min-height:20px}
+.status .spin{display:inline-block;width:11px;height:11px;border:2px solid var(--rule);border-top-color:var(--teal);border-radius:50%;animation:sp .7s linear infinite;margin-right:7px;vertical-align:-1px}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+details.cfg{background:var(--surface);border:1px solid var(--rule);margin-bottom:18px}
+details.cfg>summary{padding:11px 15px;cursor:pointer;font-size:14px;font-weight:700;list-style:none}
+details.cfg>summary::-webkit-details-marker{display:none}
+details.cfg>summary::before{content:"▸ ";color:var(--teal)}
+details.cfg[open]>summary::before{content:"▾ "}
+details.cfg .body{border-top:1px solid var(--rule-soft)}
+.cfg h3{font-size:12px;letter-spacing:.12em;color:var(--ink-3);text-transform:uppercase;margin:14px 0 8px}
+.cfg h3.first{margin-top:0}
+
+.report{margin:0;padding:0;list-style:none;font-size:13px}
+.report li{padding:3px 0 3px 17px;position:relative;color:var(--ink-2)}
+.report li::before{content:"—";position:absolute;left:0;color:var(--ink-3)}
+.report li.bad{color:var(--alert)}
+.report li.bad::before{content:"！";font-weight:700}
+
+.day{background:var(--surface);border:1px solid var(--rule);margin-bottom:20px}
+.day-head{display:flex;flex-wrap:wrap;gap:11px 16px;align-items:flex-end;padding:13px 15px;border-bottom:1px solid var(--rule-soft)}
+.day-title{font-size:17px;font-weight:700;flex:1 1 auto;min-width:180px}
+.day-title .seq{font-family:var(--font-mono);font-size:12px;color:var(--teal);letter-spacing:.14em;display:block;font-weight:600}
+.meet-place{flex:1 1 300px;min-width:200px}
+.ribbon-box{padding:11px 15px 3px}
+.ribbon{position:relative;height:52px;border:1px solid var(--rule-soft);background:linear-gradient(90deg,#fbfcfc,#f6f9fa)}
+.ribbon .lunchband{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(135deg,var(--sand) 0 5px,#f3ecda 5px 10px);border-left:1px solid #cdbd93;border-right:1px solid #cdbd93}
+.ribbon .lunchband span{position:absolute;top:2px;left:3px;font-size:9.5px;letter-spacing:.1em;color:var(--sand-ink);font-weight:700;white-space:nowrap}
+.ribbon .tick{position:absolute;top:0;bottom:0;border-left:1px solid var(--rule-soft)}
+.ribbon .tick i{position:absolute;bottom:1px;left:3px;font-style:normal;font-family:var(--font-mono);font-size:9.5px;color:var(--ink-3)}
+.blk{position:absolute;top:14px;height:22px;border-radius:1px;overflow:hidden}
+.blk-travel{background:repeating-linear-gradient(90deg,#9fb3bd 0 3px,#dce4e8 3px 6px);top:31px;height:6px}
+.blk-visit{background:var(--teal)}
+.blk-lunch{background:var(--sand);border:1px solid #cdbd93}
+.blk-clash{background:var(--alert)}
+.blk b{display:block;font-size:10px;color:#fff;font-weight:600;padding:2px 4px;white-space:nowrap}
+.blk-lunch b{color:var(--sand-ink)}
+.list{padding:4px 15px 15px}
+.leg{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:5px 0 5px 28px;color:var(--ink-2);font-size:13px;border-left:2px dotted var(--rule);margin-left:11px}
+.leg .clock{color:var(--ink-3)}
+.leg input[type=number]{width:58px;text-align:right}
+.tag{font-size:10px;letter-spacing:.1em;padding:1px 5px;border-radius:2px;border:1px solid var(--rule);color:var(--ink-3)}
+.tag-manual{border-color:var(--teal);color:var(--teal);background:var(--teal-soft)}
+.linkbtn{border:0;background:none;color:var(--teal);padding:2px 4px;font-size:12px;text-decoration:underline}
+.stop{display:grid;grid-template-columns:22px 92px 1fr auto;gap:10px;align-items:start;border:1px solid var(--rule-soft);background:#fdfefe;padding:9px 10px;margin:2px 0}
+.stop.lunch{background:#fdfbf4;border-color:#e6dcc4}
+.stop.clash{border-color:var(--alert);background:var(--alert-soft)}
+.stop.dragging{opacity:.35}
+.stop.mark-above{box-shadow:0 -3px 0 var(--teal)}
+.stop.mark-below{box-shadow:0 3px 0 var(--teal)}
+.grip{cursor:grab;color:var(--ink-3);font-size:15px;line-height:1.6;user-select:none;text-align:center}
+.clock{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;white-space:nowrap;padding-top:3px}
+.stop .clock{color:var(--ink)}
+.stop .fields{display:flex;flex-direction:column;gap:5px;min-width:0}
+.stop .fields input[type=text]{width:100%}
+.stop .name{font-weight:600}
+.stop .addr{font-size:13px;color:var(--ink-2)}
+.stop .meta{font-size:11.5px;color:var(--ink-3)}
+.stop .side{display:flex;flex-direction:column;gap:5px;align-items:flex-end}
+.stop .side .row{display:flex;gap:4px;align-items:center}
+.stop .side input[type=number]{width:56px;text-align:right}
+.stop .side select{font-size:12px;padding:3px 4px}
+.unit{font-size:11.5px;color:var(--ink-3)}
+.addbar{display:flex;gap:8px;padding:8px 0 0;flex-wrap:wrap}
+.day-foot{border-top:1px solid var(--rule-soft);padding:12px 15px 15px;background:#fbfcfd}
+.endline{display:flex;flex-wrap:wrap;gap:9px 18px;align-items:baseline;font-size:14px;margin-bottom:7px}
+.endline .big{font-family:var(--font-mono);font-size:19px;font-weight:700}
+.pill{font-size:11.5px;padding:2px 8px;border-radius:999px;border:1px solid var(--rule)}
+.pill.ok{border-color:var(--teal);color:var(--teal);background:var(--teal-soft)}
+.pill.warn{border-color:var(--warn);color:var(--warn);background:var(--warn-soft)}
+.pill.bad{border-color:var(--alert);color:var(--alert);background:var(--alert-soft)}
+.trains{margin-top:9px;border-top:1px dashed var(--rule);padding-top:9px;display:flex;flex-wrap:wrap;gap:7px 24px;font-size:13px}
+.trains .t{display:flex;gap:8px;align-items:baseline}
+.trains .lbl{font-size:10.5px;letter-spacing:.14em;color:var(--ink-3);font-weight:700}
+.trains .no{font-family:var(--font-mono);font-weight:700;color:var(--teal)}
+.trains .tm{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.trains .alt{color:var(--ink-3);font-size:12px}
+.footnote{font-size:12.5px;color:var(--ink-2);border-top:1px solid var(--rule);padding-top:12px}
+.footnote p{margin:4px 0}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:9px 18px;border-radius:2px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:60}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#printView{display:none}
+@media print{
+  body{background:#fff}
+  .wrap,.toast{display:none!important}
+  #printView{display:block;font-size:12pt}
+  #printView h1{font-size:17pt;text-align:center;margin:0 0 14px}
+  #printView h2{font-size:14pt;margin:14px 0 6px}
+  #printView table{border-collapse:collapse;width:100%;margin-bottom:12px;border:1.5pt solid #000}
+  #printView td,#printView th{border:.5pt solid #000;padding:4px 6px;font-size:11pt;vertical-align:middle}
+  #printView .tcol{width:20%;text-align:center;font-family:var(--font-mono)}
+}
+@media (max-width:640px){
+  .stop{grid-template-columns:20px 1fr;grid-template-areas:"g c" "f f" "s s"}
+  .stop .grip{grid-area:g}.stop .clock{grid-area:c}.stop .fields{grid-area:f}
+  .stop .side{grid-area:s;flex-direction:row;justify-content:space-between;align-items:center}
+  .leg{padding-left:10px;margin-left:6px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}.spin{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <div>
+      <h1>訪視行程規劃工具</h1>
+      <p class="sub">填好日期與地點，按規劃。分天、順序、午餐、車次都會自動排，排完可以拖曳微調。</p>
+    </div>
+    <div class="toolbar">
+      <button class="btn" id="btnCopy">複製行程表</button>
+      <button class="btn btn-primary" id="btnPrint">列印 / 存成 PDF</button>
+    </div>
+  </header>
+
+  <div class="card">
+    <header>
+      <h2>訪視日期</h2>
+      <span class="hint">填西元日期，星期與民國年自動換算；餐廳公休日、高鐵行駛日都靠這個判斷。</span>
+      <button class="btn" id="addDay">＋ 加一天</button>
+    </header>
+    <div class="body scroll"><table class="grid" id="dayTable"></table></div>
+  </div>
+
+  <div class="card">
+    <header>
+      <h2>行程地點</h2>
+      <span class="hint">一列一個地點。地址要含縣市，才排得出位置；整批名單可以直接貼進任一格，會自動展開成多列。</span>
+      <button class="btn" id="addPlace">＋ 新增一列</button>
+    </header>
+    <div class="body scroll">
+      <table class="grid" id="placeTable"></table>
+      <div id="parseInfo" style="font-size:12.5px;color:var(--ink-2);margin-top:9px"></div>
+    </div>
+  </div>
+
+  <details class="cfg" id="cfgBox">
+    <summary>設定（Google 服務、午餐條件、排程規則）</summary>
+    <div class="body">
+      <h3 class="first">Google 服務（選填，沒設定也能用）</h3>
+      <div class="grid-f">
+        <div class="f wide"><label>Apps Script 網址</label><input type="text" id="cfg-url" placeholder="https://script.google.com/macros/s/……/exec"></div>
+        <div class="f"><label>通行碼</label><input type="text" id="cfg-key" placeholder="與 ACCESS_KEY 相同">
+          <span class="note" style="font-size:11.5px;color:var(--ink-3)">自己想一組，同時填在 Apps Script 的指令碼屬性 ACCESS_KEY</span></div>
+        <div class="f" style="justify-content:flex-end"><button class="btn" id="btnTest">測試連線</button></div>
+      </div>
+      <h3>高鐵班次</h3>
+      <div class="grid-f">
+        <div class="f"><label>去程起點站</label><select id="cfg-originId"></select></div>
+        <div class="f"><label>去程終點站</label><select id="cfg-destId"></select></div>
+        <div class="f"><label>去程抵站緩衝（分）</label><input type="number" id="cfg-bufOut" step="5"></div>
+        <div class="f"><label>回程候車緩衝（分）</label><input type="number" id="cfg-bufBack" step="5"></div>
+      </div>
+      <div class="trainstat"><span id="trainStatus"></span></div>
+      <details class="sub">
+        <summary>檢視／手動編輯班次</summary>
+        <div class="scroll">
+          <div class="trainhead"><b>去程</b><span id="lblSouth"></span><button class="btn" id="addSouth">＋ 新增班次</button></div>
+          <table class="grid" id="southTable"></table>
+          <div class="trainhead"><b>回程</b><span id="lblNorth"></span><button class="btn" id="addNorth">＋ 新增班次</button></div>
+          <table class="grid" id="northTable"></table>
+          <p class="tiny">行駛日一個都不勾＝每日行駛。手動改的內容會被「從官方資料更新」覆蓋。</p>
+        </div>
+      </details>
+      <h3>午餐條件</h3>
+      <div class="grid-f">
+        <div class="f"><label>最低評分</label><input type="number" id="cfg-rating" step="0.1" min="0" max="5"></div>
+        <div class="f"><label>價位上限</label><select id="cfg-price">
+          <option value="1">便宜（約 200 以內）</option>
+          <option value="2">便宜～中等</option>
+          <option value="3">不限</option></select></div>
+        <div class="f"><label>搜尋半徑（公里）</label><input type="number" id="cfg-radius" step="1" min="1" max="30"></div>
+        <div class="f"><label>用餐時間（分）</label><input type="number" id="cfg-lunchMin" step="5"></div>
+      </div>
+      <h3>排程規則</h3>
+      <div class="grid-f">
+        <div class="f"><label>每廠停留（分）</label><input type="number" id="cfg-stay" step="5"></div>
+        <div class="f"><label>預設集合時間</label><input type="time" id="cfg-meet"></div>
+        <div class="f"><label>廠方午休起</label><input type="time" id="cfg-lunchFrom"></div>
+        <div class="f"><label>廠方午休迄</label><input type="time" id="cfg-lunchTo"></div>
+        <div class="f"><label>可壓進午休（分）</label><input type="number" id="cfg-tolerance" step="5"></div>
+        <div class="f"><label>目標結束</label><input type="time" id="cfg-endTarget"></div>
+        <div class="f"><label>最晚結束</label><input type="time" id="cfg-endMax"></div>
+      </div>
+    </div>
+  </details>
+
+  <div class="runbar">
+    <button class="btn btn-primary btn-lg" id="btnRun">規劃行程</button>
+    <div class="status" id="status">按下去會依地點分天、決定順序、插午餐、配車次。</div>
+  </div>
+
+  <div id="reportBox"></div>
+  <div id="days"></div>
+
+  <div class="footnote">
+    <p>車程是依座標推估的，畫面上標「推估」；實際走過後直接改分鐘數，時間會跟著重算。設定 Google 服務後地址會精確定位，推估也會比較準。</p>
+    <p>高鐵班表是內建的靜態資料，改點時要更新。訂位前請至台灣高鐵官網再核對一次。</p>
+    <p>設定與貼上的清單只存在這台電腦的瀏覽器。</p>
+  </div>
+</div>
+
+<div id="printView"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ==========================================================================
+   訪視行程規劃工具（前端）
+   未設定 Google 服務：純瀏覽器運作，地址用縣市／行政區粗略定位，午餐放占位
+   設定之後：地址精確定位、午餐依條件即時搜尋
+   ========================================================================== */
+const WK=["日","一","二","三","四","五","六"];
+const STATIONS=[["0990","南港"],["1000","臺北"],["1010","板橋"],["1020","桃園"],["1030","新竹"],
+  ["1035","苗栗"],["1040","臺中"],["1043","彰化"],["1047","雲林"],["1050","嘉義"],["1060","臺南"],["1070","左營"]];
+const stName=id=>{const x=STATIONS.find(a=>a[0]===String(id));return x?x[1]:String(id);};
+
+/* 粗略定位（未接 Google 時的後備） */
+const CITY={
+  "基隆市":[25.128,121.741],"臺北市":[25.038,121.564],"台北市":[25.038,121.564],
+  "新北市":[25.012,121.465],"桃園市":[24.993,121.301],"新竹市":[24.804,120.968],
+  "新竹縣":[24.703,121.123],"苗栗縣":[24.560,120.821],"臺中市":[24.147,120.674],"台中市":[24.147,120.674],
+  "彰化縣":[24.052,120.517],"南投縣":[23.910,120.879],"雲林縣":[23.709,120.431],
+  "嘉義市":[23.480,120.449],"嘉義縣":[23.452,120.256],"臺南市":[23.000,120.227],"台南市":[23.000,120.227],
+  "高雄市":[22.627,120.302],"屏東縣":[22.552,120.549],"宜蘭縣":[24.702,121.738],
+  "花蓮縣":[23.991,121.601],"臺東縣":[22.758,121.144],"台東縣":[22.758,121.144],
+  "澎湖縣":[23.571,119.579],"金門縣":[24.437,118.318],"連江縣":[26.160,119.951]
+};
+/* 已核對過的行政區錨點；接上 Google 後會自動長大並存在本機 */
+const DISTRICT_SEED={
+  "高雄市阿蓮區":[22.883,120.338],"高雄市大社區":[22.746,120.348],"高雄市仁武區":[22.700,120.385],
+  "高雄市大寮區":[22.585,120.429],"高雄市楠梓區":[22.728,120.330],"高雄市鳳山區":[22.641,120.348],
+  "高雄市岡山區":[22.796,120.294],"高雄市三民區":[22.661,120.314],"高雄市左營區":[22.687,120.307],
+  "屏東縣長治鄉":[22.704,120.597],"屏東縣屏東市":[22.670,120.489]
+};
+
+/* 高鐵班表：預設值，可在設定裡編輯，改過會存在本機 */
+function defTrains(){return{
+  south:[{no:"0203",dep:"06:30",arr:"08:15",run:[]},{no:"1103",dep:"06:46",arr:"08:20",run:[]},
+    {no:"0603",dep:"06:51",arr:"08:50",run:[]},{no:"0109",dep:"07:31",arr:"09:05",run:[]},
+    {no:"0609",dep:"07:46",arr:"09:45",run:[]},{no:"0205",dep:"07:51",arr:"09:30",run:[]},
+    {no:"1305",dep:"08:01",arr:"10:00",run:[1,2,3,4,5,6]},{no:"0809",dep:"08:11",arr:"10:25",run:[]},
+    {no:"0613",dep:"08:21",arr:"10:20",run:[]},{no:"0207",dep:"08:31",arr:"10:10",run:[]}],
+  north:[{no:"0648",dep:"14:00",arr:"16:02",run:[]},{no:"0834",dep:"14:25",arr:"16:42",run:[]},
+    {no:"0652",dep:"14:35",arr:"16:36",run:[]},{no:"0136",dep:"14:55",arr:"16:32",run:[]},
+    {no:"0654",dep:"15:00",arr:"17:02",run:[]},{no:"1238",dep:"15:15",arr:"16:57",run:[1,2,3,4,5,0]},
+    {no:"0838",dep:"15:25",arr:"17:42",run:[]},{no:"0658",dep:"15:35",arr:"17:36",run:[]},
+    {no:"0140",dep:"15:55",arr:"17:32",run:[]},{no:"0660",dep:"16:00",arr:"18:02",run:[]},
+    {no:"0242",dep:"16:15",arr:"17:57",run:[]},{no:"0842",dep:"16:25",arr:"18:42",run:[]},
+    {no:"0664",dep:"16:35",arr:"18:36",run:[]},{no:"1322",dep:"16:45",arr:"18:47",run:[1,2,3,4,5]},
+    {no:"0144",dep:"16:55",arr:"18:32",run:[]},{no:"0666",dep:"17:00",arr:"19:02",run:[]},
+    {no:"1246",dep:"17:15",arr:"18:57",run:[1,2,3,4,5,0]},{no:"0670",dep:"17:35",arr:"19:36",run:[]},
+    {no:"0148",dep:"17:55",arr:"19:32",run:[]}]
+};}
+let TRAINS=defTrains();
+const BUILTIN_OD="1000-1070";                 // 內建靜態班表只涵蓋這一段
+function trainsReady(){
+  const i=CFG.trainsInfo||{};
+  if(i.source==="sheet"||i.source==="manual") return true;
+  return (CFG.originId+"-"+CFG.destId)===BUILTIN_OD;
+}
+
+function defCfg(){return{
+  url:"", key:"",
+  rating:4.0, price:1, radius:12, lunchMin:60,
+  stay:60, meet:"09:45", lunchFrom:"12:00", lunchTo:"13:00", tolerance:10,
+  endTarget:"16:00", endMax:"17:00", bufOut:15, bufBack:20,
+  originId:"1000", destId:"1070", trainsInfo:{source:"builtin"},
+  place:"左營高鐵站大廳層4號出口（高雄市左營區高鐵路105號）"
+};}
+let ORIGIN={name:"集合地點",addr:"",lat:null,lng:null};
+let CFG=defCfg(), PLACES={}, GEO={}, LEGS={}, DAYS=[], ITEMS=[], uid=0;
+
+const $=id=>document.getElementById(id);
+const toMin=s=>{const p=String(s||"0:0").split(":");return (+p[0]||0)*60+(+p[1]||0);};
+const toHM=n=>{n=Math.max(0,Math.round(n));return String(Math.floor(n/60)%24).padStart(2,"0")+":"+String(n%60).padStart(2,"0");};
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const el=(t,c,h)=>{const n=document.createElement(t);if(c)n.className=c;if(h!=null)n.innerHTML=h;return n;};
+const dObj=iso=>{const p=String(iso||"").split("-");return new Date(+p[0],(+p[1]||1)-1,+p[2]||1);};
+const dow=iso=>dObj(iso).getDay();
+const rocLabel=iso=>{ if(!iso) return "（未設定日期）"; const d=dObj(iso);
+  return (d.getFullYear()-1911)+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日（星期"+WK[d.getDay()]+"）"; };
+const shortDate=iso=>{const d=dObj(iso);return (d.getMonth()+1)+"月"+d.getDate()+"日（"+WK[d.getDay()]+"）";};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* 本機保存 */
+const LS="visit-planner-v1";
+function save(){
+  try{ localStorage.setItem(LS,JSON.stringify({CFG,GEO,LEGS,TRAINS,
+    rows:ITEMS.map(i=>({name:i.name,addr:i.addr})),
+    days:DAYS.map(d=>({date:d.date,meet:d.meet,place:d.place}))})); }catch(_){}
+}
+function load(){
+  try{
+    const j=JSON.parse(localStorage.getItem(LS)||"null"); if(!j) return false;
+    CFG=Object.assign(defCfg(),j.CFG||{}); GEO=j.GEO||{}; LEGS=j.LEGS||{};
+    if(j.TRAINS&&j.TRAINS.south&&j.TRAINS.north) TRAINS=j.TRAINS;
+    if(j.days&&j.days.length) DAYS=j.days.map(d=>Object.assign({stops:[]},d));
+    if(j.rows&&j.rows.length) ITEMS=j.rows.map(r=>{
+      const o=blankRow(); o.name=r.name||""; o.addr=r.addr||""; resolveRow(o); return o; });
+    return true;
+  }catch(_){ return false; }
+}
+
+/* 地址粗略定位 */
+function coarse(addr){
+  const a=String(addr||"");
+  if(GEO[a]) return {lat:GEO[a][0],lng:GEO[a][1],exact:true,level:"精確"};
+  const dm=a.match(/(..[縣市])(.{1,4}?[區鄉鎮市])/);
+  if(dm){
+    const k=dm[1]+dm[2], seed=GEO[k]||DISTRICT_SEED[k];
+    if(seed) return {lat:seed[0],lng:seed[1],level:"區"};
+  }
+  const cm=a.match(/(..[縣市])/);
+  if(cm&&CITY[cm[1]]) return {lat:CITY[cm[1]][0],lng:CITY[cm[1]][1],level:"縣市"};
+  return {lat:null,lng:null,level:"無"};
+}
+
+/* 行程地點：列模型 */
+function blankRow(){ return {id:"f"+(++uid),name:"",addr:"",lat:null,lng:null,level:"無",exact:false,stay:+CFG.stay}; }
+function resolveRow(it){
+  const g=coarse(it.addr);
+  it.lat=g.lat; it.lng=g.lng; it.level=g.level; it.exact=!!g.exact;
+}
+function filledRows(){ return ITEMS.filter(i=>String(i.name).trim()); }
+function updateInfo(){
+  const f=filledRows();
+  if(!f.length){ $("parseInfo").innerHTML=""; return; }
+  const bad=f.filter(i=>i.lat==null).length, rough=f.filter(i=>i.level==="縣市").length;
+  let msg="共 "+f.length+" 個地點";
+  if(bad) msg+="，其中 <b style='color:var(--alert)'>"+bad+" 個地址看不出位置</b>，請補上縣市";
+  if(rough) msg+="，"+rough+" 個只定位到縣市層級，分天結果請自行核對"+(CFG.url?"":"（設定 Google 服務可精確定位）");
+  $("parseInfo").innerHTML=msg+"。";
+}
+/* 把一段多行文字拆成 [名稱,地址] */
+function splitBulk(text){
+  return String(text).split(/\r?\n/).map(l=>l.trim()).filter(Boolean).map(line=>{
+    let parts=line.split(/\s*[,，\t]\s*|\s{2,}/).map(x=>x.trim()).filter(Boolean);
+    if(parts.length===1){
+      const m=line.match(/^(.*?)((?:..[縣市]).*)$/);
+      parts=m?[m[1].trim(),m[2].trim()]:[line,""];
+    }
+    return [parts[0]||"", parts.slice(1).join(" ")];
+  });
+}
+function renderPlaces(){
+  const t=$("placeTable");
+  t.innerHTML="<tr><th>名稱</th><th>地址</th><th style='width:34px'></th></tr>";
+  ITEMS.forEach((it,i)=>{
+    const tr=el("tr",null,
+      "<td><input type='text' class='nm' data-fid='p:n:"+it.id+"' value='"+esc(it.name)+"' placeholder='單位或地點名稱'></td>"+
+      "<td><input type='text' class='ad' data-fid='p:a:"+it.id+"' value='"+esc(it.addr)+"' placeholder='含縣市的完整地址'></td>"+
+      "<td><button class='iconbtn del' title='刪除這列'>×</button></td>");
+    const nm=tr.querySelector(".nm"), ad=tr.querySelector(".ad");
+    nm.oninput=e=>{it.name=e.target.value;debInfo();};
+    ad.oninput=e=>{it.addr=e.target.value;resolveRow(it);debInfo();};
+    [nm,ad].forEach(inp=>inp.addEventListener("paste",ev=>{
+      const txt=(ev.clipboardData||window.clipboardData).getData("text");
+      if(!txt||!/[\r\n]/.test(txt)) return;          /* 單格貼上維持原生行為 */
+      ev.preventDefault();
+      const rows=splitBulk(txt); if(!rows.length) return;
+      const made=rows.map(r=>{const o=blankRow();o.name=r[0];o.addr=r[1];resolveRow(o);return o;});
+      ITEMS.splice(i,1,...made);
+      renderPlaces(); updateInfo(); save();
+    }));
+    tr.querySelector("button").onclick=()=>{
+      ITEMS.splice(i,1);
+      if(!ITEMS.length) ITEMS.push(blankRow());
+      renderPlaces(); updateInfo(); save();
+    };
+    t.appendChild(tr);
+  });
+}
+let _di; function debInfo(){ clearTimeout(_di); _di=setTimeout(()=>{updateInfo();save();},300); }
+
+/* 距離與車程 */
+function kmOf(a,b){
+  if(!a||!b||a.lat==null||b.lat==null) return null;
+  const R=6371,rad=x=>x*Math.PI/180;
+  const dLat=rad(b.lat-a.lat),dLng=rad(b.lng-a.lng);
+  const h=Math.sin(dLat/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+const legKey=(a,b)=>[a,b].sort().join("|");
+function setOrigin(day){
+  const txt=(day&&day.place)||CFG.place||"";
+  const g=coarse(txt);
+  let nm=String((txt.split(/[（(]/)[0]||"")).trim();
+  nm=nm.replace(/(大廳|大門|正門|入口|出口|[0-9０-９]+號).*$/,"").trim();
+  ORIGIN={name:nm||"集合地點",addr:txt,lat:g.lat,lng:g.lng};
+}
+const P=id=>id==="origin" ? ORIGIN : (PLACES[id]||{name:"（未知）",addr:"",lat:null,lng:null});
+function leg(a,b){
+  if(a===b) return {mins:0};
+  const k=legKey(a,b);
+  if(k in LEGS) return {mins:LEGS[k],manual:true};
+  const d=kmOf(P(a),P(b));
+  if(d==null) return {mins:20,est:true};
+  const road=d*1.4, sp=road>25?50:road>10?35:road>5?28:22;
+  return {mins:Math.max(10,Math.round((6+road/sp*60)/5)*5),est:true};
+}
+const legMin=(a,b)=>leg(a,b).mins;
+
+/* 一天的時序 */
+function schedule(day){
+  setOrigin(day);
+  let t=toMin(day.meet||CFG.meet);
+  const rows=[{kind:"meet",start:t}];
+  let prev="origin";
+  (day.stops||[]).forEach((st,i)=>{
+    const L=leg(prev,st.ref);
+    rows.push({kind:"travel",start:t,end:t+L.mins,L,from:prev,to:st.ref});
+    t+=L.mins;
+    rows.push({kind:"stop",start:t,end:t+(+st.stay||0),stop:st,idx:i});
+    t+=(+st.stay||0); prev=st.ref;
+  });
+  const L=leg(prev,"origin");
+  rows.push({kind:"travel",start:t,end:t+L.mins,L,from:prev,to:"origin",ret:true});
+  return {rows,end:t+L.mins};
+}
+
+/* 依順序組出一天：午餐先用「前後兩站中點」的虛擬餐廳佔位 */
+function buildDay(day,order){
+  setOrigin(day);
+  const LSt=toMin(CFG.lunchFrom), LEd=toMin(CFG.lunchTo), tol=+CFG.tolerance;
+  const stops=[]; let t=toMin(day.meet||CFG.meet), prev="origin", lunched=false;
+  function midPlace(a,b){
+    const A=P(a),B=b?P(b):P("origin"), id="lunch"+(++uid);
+    PLACES[id]={name:"午餐（待訂）",addr:"",pending:true,
+      lat:(A.lat!=null&&B.lat!=null)?(A.lat+B.lat)/2:A.lat,
+      lng:(A.lng!=null&&B.lng!=null)?(A.lng+B.lng)/2:A.lng};
+    return id;
+  }
+  function addLunch(nextId){
+    const rid=midPlace(prev,nextId);
+    t+=legMin(prev,rid);
+    const start=t, end=Math.max(start+(+CFG.lunchMin),LEd);
+    stops.push({kind:"lunch",ref:rid,name:"午餐（待訂）",addr:"",stay:end-start,pending:true});
+    t=end; prev=rid; lunched=true;
+  }
+  for(let i=0;i<order.length;i++){
+    const f=P(order[i]);
+    if(!lunched && t+legMin(prev,order[i])+(+f.stay||+CFG.stay) > LSt+tol) addLunch(order[i]);
+    t+=legMin(prev,order[i]);
+    stops.push({kind:"visit",ref:order[i],name:f.name,addr:f.addr,stay:(+f.stay||+CFG.stay),contact:"OOO"});
+    t+=(+f.stay||+CFG.stay); prev=order[i];
+  }
+  if(!lunched&&order.length) addLunch(null);
+  return stops;
+}
+function evalDay(day,order){
+  const sc=schedule({date:day.date,meet:day.meet,place:day.place,stops:buildDay(day,order)});
+  let travel=0; sc.rows.forEach(r=>{if(r.kind==="travel") travel+=r.L.mins;});
+  return {end:sc.end,travel};
+}
+
+/* 天內順序 */
+function permute(a){ if(a.length<=1) return [a]; const o=[];
+  a.forEach((x,i)=>permute(a.slice(0,i).concat(a.slice(i+1))).forEach(p=>o.push([x].concat(p)))); return o; }
+function bestOrder(day,ids){
+  if(ids.length<=1) return ids.slice();
+  if(ids.length<=7){
+    let best=null,bE=Infinity,bT=Infinity;
+    permute(ids).forEach(p=>{const v=evalDay(day,p);
+      if(v.end<bE||(v.end===bE&&v.travel<bT)){bE=v.end;bT=v.travel;best=p;}});
+    return best;
+  }
+  let cur=[],pool=ids.slice(),prev="origin";
+  while(pool.length){pool.sort((x,y)=>legMin(prev,x)-legMin(prev,y));prev=pool.shift();cur.push(prev);}
+  let go=true;
+  while(go){go=false;
+    for(let i=0;i<cur.length-1;i++) for(let j=i+1;j<cur.length;j++){
+      const c=cur.slice(0,i).concat(cur.slice(i,j+1).reverse(),cur.slice(j+1));
+      if(evalDay(day,c).end<evalDay(day,cur).end){cur=c;go=true;}
+    }}
+  return cur;
+}
+
+/* 分天 */
+const popcount=x=>{let c=0;while(x){x&=x-1;c++;}return c;};
+function partitionExact(days,ids){
+  const n=ids.length,m=days.length,FULL=(1<<n)-1,BIG=1e6,
+        endMax=toMin(CFG.endMax),endT=toMin(CFG.endTarget);
+  const dc=new Map();
+  function cost(i,mask){
+    const k=i+":"+mask; if(dc.has(k)) return dc.get(k);
+    let r;
+    if(!mask) r={cost:0,order:[]};
+    else{
+      const list=[]; for(let j=0;j<n;j++) if(mask&(1<<j)) list.push(ids[j]);
+      const order=bestOrder(days[i],list), v=evalDay(days[i],order);
+      /* 目標：總車程最短；每動用一天付固定代價。
+         這樣既不會出現「某天只跑一廠」的空轉日，也不會為了填滿某天而繞遠路。 */
+      r=v.end>endMax?{cost:Infinity,order:null}
+        :{cost:v.travel+2*Math.max(0,v.end-endT)+240,order};
+    }
+    dc.set(k,r); return r;
+  }
+  const memo=new Map();
+  function best(i,rest){
+    if(i===m) return {cost:popcount(rest)*BIG,split:[],left:rest};
+    const k=i+"|"+rest; if(memo.has(k)) return memo.get(k);
+    let out={cost:Infinity,split:null,left:0},T=rest;
+    for(;;){
+      const c=cost(i,T);
+      if(c.cost<Infinity){
+        const nx=best(i+1,rest&~T);
+        if(nx.split){const tot=c.cost+nx.cost-0.001*popcount(T)*(m-i);
+          if(tot<out.cost) out={cost:tot,split:[c.order].concat(nx.split),left:nx.left};}
+      }
+      if(T===0) break; T=(T-1)&rest;
+    }
+    memo.set(k,out); return out;
+  }
+  const r=best(0,FULL); if(!r.split) return null;
+  const left=[]; for(let j=0;j<n;j++) if(r.left&(1<<j)) left.push(ids[j]);
+  return {assign:r.split,left};
+}
+function partitionGreedy(days,ids){
+  const endMax=toMin(CFG.endMax), assign=days.map(()=>[]), left=[];
+  ids.slice().sort((a,b)=>legMin("origin",b)-legMin("origin",a)).forEach(x=>{
+    let bi=-1,bo=null,bd=Infinity;
+    days.forEach((d,i)=>{
+      const c=bestOrder(d,assign[i].concat([x])), v=evalDay(d,c);
+      if(v.end<=endMax){
+        const base=assign[i].length?evalDay(d,assign[i]).end:toMin(d.meet||CFG.meet);
+        if(v.end-base<bd){bd=v.end-base;bi=i;bo=c;}
+      }
+    });
+    if(bi>=0) assign[bi]=bo; else left.push(x);
+  });
+  return {assign,left};
+}
+
+/* 車次 */
+const runsOn=(t,wd)=>!t.run||!t.run.length||t.run.indexOf(wd)>=0;
+function pickSouth(day){
+  const wd=dow(day.date),meet=toMin(day.meet||CFG.meet);
+  const c=TRAINS.south.filter(t=>runsOn(t,wd)&&toMin(t.arr)<=meet-(+CFG.bufOut))
+    .sort((a,b)=>toMin(b.arr)-toMin(a.arr));
+  return c[0]||null;
+}
+function pickNorth(day,end){
+  const wd=dow(day.date),floor=end+(+CFG.bufBack);
+  const c=TRAINS.north.filter(t=>runsOn(t,wd)&&toMin(t.dep)>=floor);
+  if(!c.length) return {best:null,earliest:null};
+  const win=c.filter(t=>toMin(t.dep)<=floor+90), pool=win.length?win:c;
+  const best=pool.slice().sort((a,b)=>toMin(a.arr)-toMin(b.arr))[0];
+  const early=c.slice().sort((a,b)=>toMin(a.dep)-toMin(b.dep))[0];
+  return {best,earliest:early.no===best.no?null:early};
+}
+
+/* Apps Script 介接 */
+async function gas(action,payload){
+  if(!CFG.url) throw new Error("尚未設定 Apps Script 網址");
+  const res=await fetch(CFG.url,{
+    method:"POST",
+    headers:{"Content-Type":"text/plain;charset=utf-8"},  /* 避開 CORS 預檢 */
+    body:JSON.stringify(Object.assign({action,key:CFG.key},payload||{}))
+  });
+  const j=await res.json();
+  if(!j.ok) throw new Error(j.error||"服務回應異常");
+  return j.data;
+}
+async function geocodeAll(items){
+  const need=items.filter(i=>!i.exact&&i.addr);
+  if(!need.length) return;
+  const data=await gas("geocode",{addresses:need.map(i=>i.addr)});
+  need.forEach((i,k)=>{
+    const g=data[k];
+    if(g&&g.lat!=null){i.lat=g.lat;i.lng=g.lng;i.exact=true;i.level="精確";GEO[i.addr]=[g.lat,g.lng];}
+  });
+}
+
+/* 規劃主流程 */
+let busy=false;
+const setStatus=(txt,spin)=>{$("status").innerHTML=(spin?"<span class='spin'></span>":"")+esc(txt);};
+async function run(){
+  if(busy) return;
+  const rows=filledRows();
+  rows.forEach(resolveRow); updateInfo();
+  const days=DAYS.filter(d=>d.date);
+  if(!days.length){setStatus("請先填至少一天的日期");return;}
+  if(!rows.length){setStatus("請先在「行程地點」填至少一個地點");return;}
+  busy=true; $("btnRun").disabled=true;
+  try{
+    if(CFG.url){
+      setStatus("定位地址中…",true);
+      try{
+        await geocodeAll(rows);
+        const pa=days.map(d=>d.place||CFG.place).filter(a=>a&&!GEO[a]);
+        if(pa.length){
+          const g=await gas("geocode",{addresses:pa});
+          pa.forEach((a,i)=>{ if(g[i]&&g[i].lat!=null) GEO[a]=[g[i].lat,g[i].lng]; });
+        }
+      }
+      catch(e){ setStatus("定位失敗（"+e.message+"），改用粗略定位繼續"); await sleep(900); }
+    }
+    const usable=rows.filter(i=>i.lat!=null);
+    if(!usable.length){setStatus("所有地址都無法定位，請確認有寫縣市");return;}
+    PLACES={}; usable.forEach(i=>PLACES[i.id]=i);
+
+    setStatus("排定日期與順序…",true); await sleep(0);
+    const ids=usable.map(i=>i.id);
+    const r=(ids.length<=12&&days.length<=5)?partitionExact(days,ids):null;
+    const out=r||partitionGreedy(days,ids);
+    days.forEach((d,i)=>{
+      d.meet=d.meet||CFG.meet; d.place=d.place||CFG.place;
+      d.stops=buildDay(d,out.assign[i]||[]);
+    });
+    DAYS.filter(d=>!d.date).forEach(d=>d.stops=[]);
+    renderEditor();
+
+    if(CFG.url){
+      setStatus("搜尋午餐地點…",true);
+      for(const d of days){
+        const lu=d.stops.find(s=>s.kind==="lunch"); if(!lu) continue;
+        try{
+          const c=P(lu.ref);
+          const list=await gas("lunch",{lat:c.lat,lng:c.lng,radius:(+CFG.radius)*1000,
+            minRating:+CFG.rating,price:+CFG.price,weekday:dow(d.date),
+            openFrom:CFG.lunchFrom,openTo:CFG.lunchTo});
+          const g=list&&list.length?list[0]:null;
+          if(g){
+            PLACES[lu.ref]=Object.assign({},PLACES[lu.ref],{name:g.name,addr:g.addr,lat:g.lat,lng:g.lng,pending:false});
+            lu.name=g.name; lu.addr=g.addr; lu.pending=false;
+            lu.meta=[g.rating?("★"+Number(g.rating).toFixed(1)):"",g.price||"",g.note||""].filter(Boolean).join("　");
+            const row=schedule(d).rows.find(x=>x.kind==="stop"&&x.stop===lu);
+            if(row) lu.stay=Math.max(+CFG.lunchMin,toMin(CFG.lunchTo)-row.start);
+          }
+        }catch(_){ /* 單日失敗不中斷 */ }
+      }
+      renderEditor();
+    }
+
+    const rep=[];
+    days.forEach(d=>{
+      const sc=schedule(d), v=d.stops.filter(s=>s.kind==="visit").length;
+      rep.push({bad:false,text:rocLabel(d.date)+"：訪視 "+v+" 廠，"+toHM(sc.end)+" 結束"+
+        (sc.end>toMin(CFG.endTarget)?"（超過目標 "+CFG.endTarget+"）":"")});
+    });
+    if(out.left.length) rep.push({bad:true,text:"排不進去："+out.left.map(x=>P(x).name).join("、")+
+      "。需要多一天、縮短停留，或放寬最晚結束時間。"});
+    if(!CFG.url) rep.push({bad:false,text:"未設定 Google 服務：午餐是占位，名稱與地址請自己填。"});
+    showReport(rep);
+    setStatus("排好了，下方可以拖曳微調。");
+  }catch(e){ setStatus("規劃失敗："+e.message); }
+  finally{ busy=false; $("btnRun").disabled=false; save(); }
+}
+function showReport(rep){
+  const box=$("reportBox"); box.innerHTML="";
+  const c=el("div","card");
+  c.appendChild(el("header",null,"<h2>規劃結果</h2><span class='hint'>下方行程可以直接拖曳微調，時間會跟著重算。</span>"));
+  const b=el("div","body");
+  b.appendChild(el("ul","report",rep.map(r=>"<li class='"+(r.bad?"bad":"")+"'>"+esc(r.text)+"</li>").join("")));
+  c.appendChild(b); box.appendChild(c);
+}
+
+/* ---------------- 畫面 ---------------- */
+function renderDays(){
+  const t=$("dayTable");
+  t.innerHTML="<tr><th style='width:150px'>日期</th><th style='width:110px'>集合時間</th><th>集合地點</th><th style='width:145px'>民國格式</th><th style='width:34px'></th></tr>";
+  DAYS.forEach((d,i)=>{
+    const tr=el("tr",null,
+      "<td><input type='date' value='"+esc(d.date)+"'></td>"+
+      "<td><input type='time' value='"+esc(d.meet||CFG.meet)+"'></td>"+
+      "<td><input type='text' value='"+esc(d.place||CFG.place)+"'></td>"+
+      "<td style='font-size:12.5px;color:var(--ink-2)'>"+esc(rocLabel(d.date))+"</td>"+
+      "<td><button class='iconbtn del'>×</button></td>");
+    const ins=tr.querySelectorAll("input");
+    ins[0].onchange=e=>{d.date=e.target.value;renderDays();renderEditor();save();};
+    ins[1].onchange=e=>{d.meet=e.target.value;renderEditor();save();};
+    ins[2].oninput =e=>{d.place=e.target.value;save();};
+    tr.querySelector("button").onclick=()=>{DAYS.splice(i,1);renderDays();renderEditor();save();};
+    t.appendChild(tr);
+  });
+}
+
+let drag=null,dropAt=null;
+function renderEditor(){
+  const host=$("days");
+  const a=document.activeElement,fid=a&&a.dataset?a.dataset.fid:null;
+  let sel=null; try{ if(fid&&a.selectionStart!=null) sel=[a.selectionStart,a.selectionEnd]; }catch(_){}
+  host.innerHTML="";
+  DAYS.forEach((d,i)=>{ if((d.stops||[]).length) host.appendChild(dayCard(d,i)); });
+  if(fid){const n=host.querySelector('[data-fid="'+fid+'"]');
+    if(n){n.focus();try{if(sel)n.setSelectionRange(sel[0],sel[1]);}catch(_){}}}
+}
+function dayCard(day,di){
+  const sc=schedule(day), w=el("section","day");
+  const head=el("div","day-head",
+    "<h2 class='day-title'><span class='seq'>第 "+(di+1)+" 天</span>"+esc(rocLabel(day.date))+"</h2>"+
+    "<div class='f' style='flex:0 0 116px'><label>集合時間</label><input type='time' data-fid='"+di+":meet' value='"+esc(day.meet||CFG.meet)+"'></div>"+
+    "<div class='f meet-place'><label>集合地點</label><input type='text' data-fid='"+di+":place' value='"+esc(day.place||CFG.place)+"'></div>");
+  head.querySelector("input[type=time]").onchange=e=>{day.meet=e.target.value;renderDays();renderEditor();save();};
+  head.querySelector(".meet-place input").oninput=e=>{day.place=e.target.value;save();};
+  w.appendChild(head);
+  const rb=el("div","ribbon-box"); rb.appendChild(ribbon(sc)); w.appendChild(rb);
+  const list=el("div","list");
+  sc.rows.forEach(r=>{
+    if(r.kind==="meet") list.appendChild(el("div","leg","<span class='clock'>"+toHM(r.start)+"</span><span>集合－"+esc(day.place||CFG.place)+"</span>"));
+    if(r.kind==="travel") list.appendChild(legRow(r,di));
+    if(r.kind==="stop") list.appendChild(stopRow(r,di));
+  });
+  const add=el("div","addbar","<button class='btn' data-add='visit'>＋ 空白訪視</button><button class='btn' data-add='lunch'>＋ 空白午餐</button>");
+  add.querySelectorAll("button").forEach(b=>b.onclick=()=>{
+    const kind=b.dataset.add, id="x"+(++uid);
+    PLACES[id]={name:kind==="lunch"?"午餐（待訂）":"（單位名稱）",addr:"",lat:null,lng:null};
+    day.stops.push({kind,ref:id,name:PLACES[id].name,addr:"",stay:kind==="lunch"?(+CFG.lunchMin):(+CFG.stay),contact:"OOO"});
+    renderEditor();
+  });
+  list.appendChild(add);
+  list.addEventListener("dragover",e=>e.preventDefault());
+  list.addEventListener("drop",e=>{e.preventDefault();commitDrop(di,null,false);});
+  w.appendChild(list); w.appendChild(dayFoot(day,sc));
+  return w;
+}
+function ribbon(sc){
+  const T0=8.5*60,T1=18.5*60,span=T1-T0,pc=m=>((Math.min(Math.max(m,T0),T1)-T0)/span*100);
+  const LSt=toMin(CFG.lunchFrom),LEd=toMin(CFG.lunchTo);
+  let h="<div class='lunchband' style='left:"+pc(LSt)+"%;width:"+(pc(LEd)-pc(LSt))+"%'><span>午休</span></div>";
+  for(let x=9;x<=18;x++) h+="<div class='tick' style='left:"+pc(x*60)+"%'><i>"+x+"</i></div>";
+  sc.rows.forEach(r=>{
+    if(r.kind==="travel") h+="<div class='blk blk-travel' style='left:"+pc(r.start)+"%;width:"+(pc(r.end)-pc(r.start))+"%'></div>";
+    else if(r.kind==="stop"){
+      const clash=r.stop.kind==="visit"&&r.start<LEd&&r.end>LSt+(+CFG.tolerance);
+      const cls=clash?"blk-clash":(r.stop.kind==="lunch"?"blk-lunch":"blk-visit");
+      const wd=pc(r.end)-pc(r.start);
+      h+="<div class='blk "+cls+"' style='left:"+pc(r.start)+"%;width:"+wd+"%' title='"+esc(r.stop.name)+" "+toHM(r.start)+"–"+toHM(r.end)+"'>"+(wd>7?"<b>"+esc(shortName(r.stop.name))+"</b>":"")+"</div>";
+    }
+  });
+  return el("div","ribbon",h);
+}
+const shortName=n=>String(n).replace(/股份有限公司|有限公司|企業|實業|環保科技|環保工程/g,"").slice(0,6);
+
+function legRow(r,di){
+  const to=r.ret?("返回"+ORIGIN.name):("至"+P(r.to).name);
+  const d=el("div","leg",
+    "<span class='clock'>"+toHM(r.start)+"–"+toHM(r.end)+"</span><span>車程，"+esc(to)+"</span>"+
+    "<input type='number' min='0' max='300' step='5' data-fid='"+di+":leg:"+legKey(r.from,r.to)+"' value='"+r.L.mins+"'> <span class='unit'>分鐘</span>"+
+    (r.L.manual?"<span class='tag tag-manual'>手動</span><button class='linkbtn'>改回自動</button>":(r.L.est?"<span class='tag'>推估</span>":"")));
+  const k=legKey(r.from,r.to);
+  d.querySelector("input").oninput=e=>{LEGS[k]=Math.max(0,parseInt(e.target.value,10)||0);renderEditor();save();};
+  const b=d.querySelector(".linkbtn"); if(b) b.onclick=()=>{delete LEGS[k];renderEditor();save();};
+  return d;
+}
+function stopRow(r,di){
+  const day=DAYS[di],st=r.stop,i=r.idx;
+  const clash=st.kind==="visit"&&r.start<toMin(CFG.lunchTo)&&r.end>toMin(CFG.lunchFrom)+(+CFG.tolerance);
+  const d=el("div","stop"+(st.kind==="lunch"?" lunch":"")+(clash?" clash":""),
+    "<div class='grip' title='拖曳改順序'>⣿</div>"+
+    "<div class='clock'>"+toHM(r.start)+"<br>"+toHM(r.end)+"</div>"+
+    "<div class='fields'><input type='text' class='name' data-fid='"+di+":name:"+i+"' value='"+esc(st.name)+"' aria-label='名稱'>"+
+    "<input type='text' class='addr' data-fid='"+di+":addr:"+i+"' value='"+esc(st.addr)+"' aria-label='地址' placeholder='"+(st.kind==="lunch"?"餐廳地址":"地址")+"'>"+
+    (st.meta?"<div class='meta'>"+esc(st.meta)+"</div>":"")+"</div>"+
+    "<div class='side'><div class='row'><input type='number' class='stay' data-fid='"+di+":stay:"+i+"' min='5' max='300' step='5' value='"+st.stay+"'><span class='unit'>分鐘</span></div>"+
+    "<div class='row'><button class='iconbtn up' title='上移'>▲</button><button class='iconbtn down' title='下移'>▼</button>"+
+    "<select class='moveday' title='移到其他天'>"+DAYS.map((dd,k)=>"<option value='"+k+"'"+(k===di?" selected":"")+">"+esc(dd.date?shortDate(dd.date):("第"+(k+1)+"天"))+"</option>").join("")+"</select>"+
+    "<button class='iconbtn del' title='刪除'>×</button></div></div>");
+  d.draggable=true;
+  d.querySelector(".name").oninput=e=>{st.name=e.target.value;if(PLACES[st.ref])PLACES[st.ref].name=e.target.value;};
+  d.querySelector(".addr").oninput=e=>{st.addr=e.target.value;if(PLACES[st.ref])PLACES[st.ref].addr=e.target.value;};
+  d.querySelector(".stay").oninput=e=>{st.stay=Math.max(0,parseInt(e.target.value,10)||0);renderEditor();};
+  d.querySelector(".up").onclick=()=>{if(i>0){day.stops.splice(i-1,0,day.stops.splice(i,1)[0]);renderEditor();}};
+  d.querySelector(".down").onclick=()=>{if(i<day.stops.length-1){day.stops.splice(i+1,0,day.stops.splice(i,1)[0]);renderEditor();}};
+  d.querySelector(".del").onclick=()=>{day.stops.splice(i,1);renderEditor();};
+  d.querySelector(".moveday").onchange=e=>{const k=+e.target.value;if(k===di)return;DAYS[k].stops.push(day.stops.splice(i,1)[0]);renderEditor();};
+  d.addEventListener("dragstart",e=>{drag={day:di,idx:i};d.classList.add("dragging");e.dataTransfer.effectAllowed="move";try{e.dataTransfer.setData("text/plain","x");}catch(_){}});
+  d.addEventListener("dragend",()=>{d.classList.remove("dragging");clearMarks();drag=null;});
+  d.addEventListener("dragover",e=>{e.preventDefault();if(!drag)return;const b=d.getBoundingClientRect();const af=e.clientY>b.top+b.height/2;clearMarks();d.classList.add(af?"mark-below":"mark-above");dropAt={after:af};});
+  d.addEventListener("drop",e=>{e.preventDefault();e.stopPropagation();commitDrop(di,i,dropAt?dropAt.after:false);});
+  return d;
+}
+function clearMarks(){document.querySelectorAll(".mark-above,.mark-below").forEach(n=>n.classList.remove("mark-above","mark-below"));}
+function commitDrop(td,ti,after){
+  if(!drag) return;
+  const item=DAYS[drag.day].stops.splice(drag.idx,1)[0], dst=DAYS[td].stops;
+  let pos=ti===null?dst.length:ti+(after?1:0);
+  if(drag.day===td&&drag.idx<pos) pos--;
+  dst.splice(Math.max(0,Math.min(pos,dst.length)),0,item);
+  drag=null;dropAt=null;clearMarks();renderEditor();
+}
+function dayFoot(day,sc){
+  const LSt=toMin(CFG.lunchFrom),LEd=toMin(CFG.lunchTo),tol=+CFG.tolerance;
+  const f=el("div","day-foot"); const notes=[]; let bad=false;
+  sc.rows.forEach(r=>{
+    if(r.kind==="stop"&&r.stop.kind==="visit"&&r.start<LEd&&r.end>LSt+tol){
+      notes.push({bad:true,text:"「"+r.stop.name+"」"+toHM(r.start)+"–"+toHM(r.end)+" 壓到廠方午休 "+CFG.lunchFrom+"–"+CFG.lunchTo});bad=true;}
+  });
+  if(ORIGIN.lat==null) notes.push({bad:true,text:"集合地點看不出位置，來回車程用了預設值，請在地點寫上縣市"});
+  const lunch=sc.rows.find(r=>r.kind==="stop"&&r.stop.kind==="lunch");
+  if(!lunch) notes.push({bad:false,text:"這一天沒有安排午餐"});
+  else if(lunch.stop.pending) notes.push({bad:false,text:"午餐地點還沒定，請填名稱與地址"});
+  const eT=toMin(CFG.endTarget),eM=toMin(CFG.endMax);
+  let pill="ok",txt=CFG.endTarget+" 前結束";
+  if(sc.end>eM){pill="bad";txt="超過 "+CFG.endMax;bad=true;}
+  else if(sc.end>eT){pill="warn";txt="超過 "+CFG.endTarget+"，仍在 "+CFG.endMax+" 內";}
+  const s=pickSouth(day),n=pickNorth(day,sc.end);
+  const v=(day.stops||[]).filter(x=>x.kind==="visit").length;
+  f.innerHTML=
+    "<div class='endline'><span>行程結束 <span class='big'>"+toHM(sc.end)+"</span></span>"+
+    "<span class='pill "+pill+"'>"+esc(txt)+"</span><span class='pill'>訪視 "+v+" 廠</span>"+
+    (bad?"<span class='pill bad'>有衝突</span>":"<span class='pill ok'>時段無衝突</span>")+"</div>"+
+    "<ul class='report'>"+(notes.map(x=>"<li class='"+(x.bad?"bad":"")+"'>"+esc(x.text)+"</li>").join("")||"<li>午休時段淨空</li>")+"</ul>"+
+    (trainsReady()?
+    ("<div class='trains'><div class='t'><span class='lbl'>去程</span>"+(s
+      ?"<span><span class='no'>"+s.no+"</span> <span class='tm'>"+esc(stName(CFG.originId))+" "+s.dep+" → "+esc(stName(CFG.destId))+" "+s.arr+"</span> <span class='alt'>（抵站後 "+(toMin(day.meet||CFG.meet)-toMin(s.arr))+" 分鐘集合）</span></span>"
+      :"<span class='alt'>集合太早，班表裡沒有趕得上的班次</span>")+"</div>"+
+    "<div class='t'><span class='lbl'>回程</span>"+(n.best
+      ?"<span><span class='no'>"+n.best.no+"</span> <span class='tm'>"+esc(stName(CFG.destId))+" "+n.best.dep+" → "+esc(stName(CFG.originId))+" "+n.best.arr+"</span> <span class='alt'>（緩衝 "+(toMin(n.best.dep)-sc.end)+" 分鐘）</span>"+(n.earliest?" <span class='alt'>｜最早發車 "+n.earliest.no+" "+n.earliest.dep+"→"+n.earliest.arr+"</span>":"")+"</span>"
+      :"<span class='alt'>結束太晚，班表裡沒有合適班次</span>")+"</div></div>")
+    :("<div class='trains'><span class='alt'>班表資料庫裡沒有 "+esc(stName(CFG.originId))+"－"+esc(stName(CFG.destId))+" 的班次，這一段不提供車次建議</span></div>"));
+  return f;
+}
+
+/* 輸出 */
+function buildTables(){
+  let h="<h1>訪視行程</h1>"; const rows=[];
+  DAYS.forEach(day=>{
+    if(!(day.stops||[]).length) return;
+    const sc=schedule(day);
+    h+="<h2>"+esc(rocLabel(day.date))+"</h2><table><tr><th class='tcol'>時間</th><th>說明</th></tr>";
+    sc.rows.forEach(r=>{
+      if(r.kind==="meet") h+="<tr><td class='tcol'>"+toHM(r.start)+"</td><td>集合-"+esc(day.place||CFG.place)+"</td></tr>";
+      if(r.kind==="travel"){
+        const to=r.ret?("返回"+ORIGIN.name):("至"+P(r.to).name);
+        h+="<tr><td class='tcol'>"+toHM(r.start)+"-"+toHM(r.end)+"</td><td>車程，"+esc(to)+"（約"+r.L.mins+"分鐘）</td></tr>";
+      }
+      if(r.kind==="stop"){
+        const st=r.stop;
+        const main=st.kind==="lunch"?("午餐："+esc(st.name)):("<b>"+esc(st.name)+"</b>（"+esc(st.contact||"OOO")+"負責人）");
+        h+="<tr><td class='tcol'>"+toHM(r.start)+"-"+toHM(r.end)+"</td><td>"+main+(st.addr?"<br>"+esc(st.addr):"")+"</td></tr>";
+      }
+    });
+    h+="</table>";
+    if(!trainsReady()) return;
+    const s=pickSouth(day),n=pickNorth(day,sc.end),d=shortDate(day.date);
+    if(s) rows.push([d,"去程",stName(CFG.originId)+"－"+stName(CFG.destId),s.no,s.dep,s.arr]);
+    if(n.best) rows.push([d,"回程",stName(CFG.destId)+"－"+stName(CFG.originId),n.best.no,n.best.dep,n.best.arr]);
+  });
+  if(rows.length){
+    h+="<h2>建議車次</h2><table><tr><th>日期</th><th>行程</th><th>內容</th><th>車次</th><th>搭車時間</th><th>抵達時間</th></tr>";
+    rows.forEach(r=>{h+="<tr>"+r.map(c=>"<td style='text-align:center'>"+esc(c)+"</td>").join("")+"</tr>";});
+    h+="</table>";
+  }
+  return h;
+}
+$("btnPrint").onclick=()=>{$("printView").innerHTML=buildTables();window.print();};
+window.addEventListener("beforeprint",()=>{$("printView").innerHTML=buildTables();});
+$("btnCopy").onclick=async()=>{
+  const h=buildTables();
+  const plain=h.replace(/<br>/g,"\n").replace(/<[^>]+>/g,"\t").replace(/\t+/g,"\t").replace(/\n\t/g,"\n");
+  try{
+    await navigator.clipboard.write([new ClipboardItem({"text/html":new Blob([h],{type:"text/html"}),"text/plain":new Blob([plain],{type:"text/plain"})})]);
+    toast("行程表已複製，可直接貼到 Word");
+  }catch(_){
+    const ta=document.createElement("textarea");ta.value=plain;document.body.appendChild(ta);ta.select();
+    try{document.execCommand("copy");toast("已複製純文字版本");}catch(e){toast("複製失敗，請改用列印");}
+    ta.remove();
+  }
+};
+
+/* 高鐵班表編輯 */
+function markManual(){ CFG.trainsInfo={source:"manual"}; trainStatus(); }
+function renderTrains(){
+  [["southTable",TRAINS.south,"lblSouth",CFG.depStation+" → "+CFG.hubStation],
+   ["northTable",TRAINS.north,"lblNorth",CFG.hubStation+" → "+CFG.depStation]].forEach(function(x){
+    const t=$(x[0]), arr=x[1];
+    $(x[2]).textContent=x[3];
+    t.innerHTML="<tr><th style='width:88px'>車次</th><th style='width:104px'>發車</th><th style='width:104px'>抵達</th><th>行駛日</th><th style='width:34px'></th></tr>";
+    if(!arr.length){ t.appendChild(el("tr",null,"<td colspan='5' style='color:var(--ink-3)'>沒有班次，這個方向不會給建議</td>")); return; }
+    arr.forEach((tr0,i)=>{
+      const tr=el("tr",null,
+        "<td><input type='text' value='"+esc(tr0.no)+"'></td>"+
+        "<td><input type='time' value='"+esc(tr0.dep)+"'></td>"+
+        "<td><input type='time' value='"+esc(tr0.arr)+"'></td>"+
+        "<td><div class='wk'>"+WK.map((w,k)=>"<button type='button' class='"+((tr0.run||[]).indexOf(k)>=0?"on":"")+"' data-d='"+k+"'>"+w+"</button>").join("")+"</div></td>"+
+        "<td><button class='iconbtn del'>×</button></td>");
+      const ins=tr.querySelectorAll("input");
+      ins[0].oninput =e=>{tr0.no=e.target.value;markManual();save();};
+      ins[1].onchange=e=>{tr0.dep=e.target.value;renderEditor();markManual();save();};
+      ins[2].onchange=e=>{tr0.arr=e.target.value;renderEditor();markManual();save();};
+      tr.querySelectorAll(".wk button").forEach(b=>b.onclick=()=>{
+        tr0.run=tr0.run||[];
+        const k=+b.dataset.d, pos=tr0.run.indexOf(k);
+        if(pos>=0) tr0.run.splice(pos,1); else tr0.run.push(k);
+        markManual(); renderTrains(); renderEditor(); save();
+      });
+      tr.querySelector(".del").onclick=()=>{arr.splice(i,1);markManual();renderTrains();renderEditor();save();};
+      t.appendChild(tr);
+    });
+  });
+}
+async function loadTimetable(){
+  if(!CFG.url) { trainStatus(); return; }
+  try{
+    const t=await gas("timetable",{originId:CFG.originId,destId:CFG.destId});
+    if(t&&t.out&&t.out.length){
+      TRAINS={south:t.out,north:t.back||[]};
+      CFG.trainsInfo={source:"sheet",updated:t.updated||""};
+    }else{
+      CFG.trainsInfo={source:"builtin"};
+      trainStatus("班表資料庫沒有 "+stName(CFG.originId)+"－"+stName(CFG.destId)+" 的資料，改用內建靜態班表");
+      renderTrains(); renderEditor(); save(); return;
+    }
+  }catch(e){
+    trainStatus("讀取班表資料庫失敗（"+e.message+"），改用內建靜態班表");
+    renderTrains(); renderEditor(); return;
+  }
+  trainStatus(); renderTrains(); renderEditor(); save();
+}
+$("addSouth").onclick=()=>{TRAINS.south.push({no:"",dep:"07:00",arr:"08:40",run:[]});markManual();renderTrains();save();};
+$("addNorth").onclick=()=>{TRAINS.north.push({no:"",dep:"16:00",arr:"18:00",run:[]});markManual();renderTrains();save();};
+
+/* 設定綁定 */
+const CFG_FIELDS=["url","key","originId","destId","bufOut","bufBack","rating","price","radius","lunchMin","stay","meet","lunchFrom","lunchTo","tolerance","endTarget","endMax"];
+function fillStations(){
+  ["cfg-originId","cfg-destId"].forEach(id=>{
+    const n=$(id); if(!n||n.options.length) return;
+    n.innerHTML=STATIONS.map(x=>"<option value='"+x[0]+"'>"+x[1]+"</option>").join("");
+  });
+}
+function trainStatus(msg){
+  if(msg!=null){ $("trainStatus").textContent=msg; return; }
+  const i=CFG.trainsInfo||{};
+  const od=stName(CFG.originId)+"－"+stName(CFG.destId);
+  if(i.source==="sheet") $("trainStatus").textContent="班表資料庫："+od+"，"+(i.updated?(i.updated+" 更新"):"未註明更新日期");
+  else if(i.source==="manual") $("trainStatus").textContent="班表：手動調整過（未與資料庫同步）";
+  else if((CFG.originId+"-"+CFG.destId)===BUILTIN_OD)
+    $("trainStatus").textContent="班表：內建靜態資料（僅臺北－左營，隨程式發布，可能過時）";
+  else $("trainStatus").textContent="班表：沒有 "+od+" 的資料，這一段不會給車次建議";
+}
+function bindCfg(){
+  fillStations();
+  CFG_FIELDS.forEach(k=>{
+    const n=$("cfg-"+k); if(!n) return;
+    n.value=CFG[k];
+    n.onchange=e=>{
+      const v=e.target.value;
+      CFG[k]=(n.type==="number"||k==="price")?(parseFloat(v)||0):v;
+      renderDays(); renderTrains(); trainStatus(); renderEditor(); save();
+      if(k==="originId"||k==="destId"||k==="url"||k==="key") loadTimetable();
+    };
+  });
+}
+$("btnTest").onclick=async()=>{
+  CFG.url=$("cfg-url").value.trim(); CFG.key=$("cfg-key").value.trim(); save();
+  if(!CFG.url){toast("請先貼上 Apps Script 網址");return;}
+  setStatus("測試連線中…",true);
+  try{const d=await gas("ping");setStatus("連線正常："+((d&&d.msg)||"OK"));toast("連線正常");}
+  catch(e){setStatus("連線失敗："+e.message);toast("連線失敗");}
+};
+$("addDay").onclick=()=>{
+  const last=DAYS[DAYS.length-1];
+  DAYS.push({date:"",meet:(last&&last.meet)||"",place:(last&&last.place)||CFG.place,stops:[]});
+  renderDays();save();};
+$("addPlace").onclick=()=>{ITEMS.push(blankRow());renderPlaces();
+  const ins=$("placeTable").querySelectorAll("tr:last-child input");if(ins.length)ins[0].focus();save();};
+$("btnRun").onclick=run;
+
+let tt; function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("show"),2400);}
+
+/* 啟動 */
+if(!load()){
+  const t=new Date(); t.setDate(t.getDate()+14);
+  DAYS=[{date:t.toISOString().slice(0,10),meet:"",place:"",stops:[]}];
+}
+if(!DAYS.length) DAYS=[{date:"",meet:"",place:"",stops:[]}];
+while(ITEMS.length<3) ITEMS.push(blankRow());
+bindCfg(); renderDays(); renderPlaces(); updateInfo(); renderTrains(); trainStatus(); renderEditor();
+if(CFG.url) loadTimetable();
+</script>
+</body>
+</html>
