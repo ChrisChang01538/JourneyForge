@@ -23,7 +23,12 @@ h1,h2,h3{margin:0}
 .masthead{border-top:3px solid var(--ink);padding-top:13px;margin-bottom:18px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;justify-content:space-between}
 .masthead h1{font-size:22px}
 .masthead .sub{margin:3px 0 0;color:var(--ink-2);font-size:13px}
-.masthead .sub a{color:var(--teal);font-weight:600}
+.mast-right{display:flex;flex-direction:column;align-items:flex-end;gap:9px}
+.doclinks{font-size:13px;line-height:1}
+.doclinks a{color:var(--teal);font-weight:600;text-decoration:none;margin-left:18px}
+.doclinks a:first-child{margin-left:0}
+.doclinks a:hover{text-decoration:underline}
+@media (max-width:640px){.mast-right{align-items:flex-start;width:100%}}
 .toolbar{display:flex;gap:7px;flex-wrap:wrap}
 button{font-family:inherit;font-size:13px;cursor:pointer}
 .btn{border:1px solid var(--rule);background:var(--surface);color:var(--ink);padding:7px 13px;border-radius:2px;transition:background .12s,border-color .12s}
@@ -229,13 +234,19 @@ details.cfg .body{padding:14px 15px;border-top:1px solid var(--rule-soft)}
   <header class="masthead">
     <div>
       <h1>行程規劃工具</h1>
-      <p class="sub">填好日期與地點，按規劃。分天、順序、午餐、車次都會自動排，排完可以拖曳微調。　<a href="guide.html" target="_blank" rel="noopener">新手指南</a>　<a href="sop.html" target="_blank" rel="noopener">系統說明</a></p>
+      <p class="sub">填好日期與地點，按規劃。分天、順序、午餐、車次都會自動排，排完可以拖曳微調。</p>
     </div>
-    <div class="toolbar">
-      <button class="btn" id="btnSave">儲存案件</button>
-      <button class="btn" id="btnCopy">複製行程表</button>
-      <button class="btn" id="btnWord">產生 Word 檔</button>
-      <button class="btn btn-primary" id="btnPrint">列印 / 存成 PDF</button>
+    <div class="mast-right">
+      <div class="doclinks">
+        <a href="guide.html" target="_blank" rel="noopener">新手指南</a>
+        <a href="sop.html" target="_blank" rel="noopener">系統說明</a>
+      </div>
+      <div class="toolbar">
+        <button class="btn" id="btnSave">儲存案件</button>
+        <button class="btn" id="btnCopy">複製行程表</button>
+        <button class="btn" id="btnWord">產生 Word 檔</button>
+        <button class="btn btn-primary" id="btnPrint">列印 / 存成 PDF</button>
+      </div>
     </div>
   </header>
 
