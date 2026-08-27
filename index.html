@@ -23,6 +23,7 @@ h1,h2,h3{margin:0}
 .masthead{border-top:3px solid var(--ink);padding-top:13px;margin-bottom:18px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;justify-content:space-between}
 .masthead h1{font-size:22px}
 .masthead .sub{margin:3px 0 0;color:var(--ink-2);font-size:13px}
+.masthead .sub a{color:var(--teal);font-weight:600}
 .toolbar{display:flex;gap:7px;flex-wrap:wrap}
 button{font-family:inherit;font-size:13px;cursor:pointer}
 .btn{border:1px solid var(--rule);background:var(--surface);color:var(--ink);padding:7px 13px;border-radius:2px;transition:background .12s,border-color .12s}
@@ -75,8 +76,23 @@ details.sub>summary::before{content:"▸ "}
 details.sub[open]>summary::before{content:"▾ "}
 .trainstat{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px;font-size:12.5px;color:var(--ink-2)}
 
-.runbar{display:flex;flex-wrap:wrap;gap:14px;align-items:center;padding:15px;background:var(--surface);border:1px solid var(--rule);margin-bottom:18px}
-.status{flex:1 1 260px;font-size:13px;color:var(--ink-2);min-height:20px}
+.runbar{display:flex;flex-wrap:wrap;align-items:center;padding:15px;background:var(--surface);border:1px solid var(--rule);margin-bottom:18px}
+.runbar>#btnRun{margin-right:15px}
+#connectBar:empty{display:none}
+/* 同一張卡片裡的第二段：不用底色，靠一條分隔線區隔 */
+#connectBar{display:flex;flex-wrap:wrap;align-items:center;font-size:13px;
+  padding-left:15px;border-left:1px solid var(--rule-soft)}
+#connectBar>*{margin-right:8px}
+#connectBar>*:last-child{margin-right:0}
+#connectBar .lbl{flex-basis:100%;margin:0 0 5px;font-size:10.5px;letter-spacing:.14em;
+  color:var(--ink-3);text-transform:uppercase;font-weight:700}
+/* 三個控制項高度一致，下緣才會對齊 */
+#connectBar input{height:32px;width:130px}
+#connectBar .btn{height:32px;padding:0 15px}
+#connectBar .ok{color:var(--ink-2)}
+#connectBar .ok b{color:var(--teal)}
+/* 說明文字自成一列，上下留白與卡片內距相同 */
+.status{flex-basis:100%;margin-top:15px;font-size:13px;color:var(--ink-2);min-height:20px}
 .status .spin{display:inline-block;width:11px;height:11px;border:2px solid var(--rule);border-top-color:var(--teal);border-radius:50%;animation:sp .7s linear infinite;margin-right:7px;vertical-align:-1px}
 @keyframes sp{to{transform:rotate(360deg)}}
 
@@ -203,7 +219,7 @@ details.cfg .body{padding:14px 15px;border-top:1px solid var(--rule-soft)}
   <header class="masthead">
     <div>
       <h1>行程規劃工具</h1>
-      <p class="sub">填好日期與地點，按規劃。分天、順序、午餐、車次都會自動排，排完可以拖曳微調。</p>
+      <p class="sub">填好日期與地點，按規劃。分天、順序、午餐、車次都會自動排，排完可以拖曳微調。　<a href="sop.html" target="_blank" rel="noopener">操作說明</a></p>
     </div>
     <div class="toolbar">
       <button class="btn" id="btnSave">儲存案件</button>
@@ -239,6 +255,7 @@ details.cfg .body{padding:14px 15px;border-top:1px solid var(--rule-soft)}
     <div class="body">
       <h3 class="first">公文設定</h3>
       <div class="grid-f">
+        <div class="f"><label>使用者（會記進使用紀錄）</label><input type="text" id="cfg-user" placeholder="你的姓名"></div>
         <div class="f wide"><label>文件標題</label><input type="text" id="cfg-docTitle" placeholder="例：環境部資源循環署訪視行程（乙計畫）"></div>
         <div class="f wide"><label>出席人員（一行一項，會照原樣排進「四、出席人員」）</label>
           <textarea id="cfg-attendees" style="min-height:74px"></textarea></div>
@@ -299,6 +316,7 @@ details.cfg .body{padding:14px 15px;border-top:1px solid var(--rule-soft)}
 
   <div class="runbar">
     <button class="btn btn-primary btn-lg" id="btnRun">規劃行程</button>
+    <div id="connectBar"></div>
     <div class="status" id="status">按下去會依地點分天、決定順序、插午餐、配車次。</div>
   </div>
 
@@ -384,7 +402,7 @@ function defCfg(){return{
   rating:4.0, price:1, radius:12, lunchMin:60,
   stay:60, meet:"09:45", lunchFrom:"12:00", lunchTo:"13:00", tolerance:10,
   endTarget:"16:00", endMax:"17:00", bufOut:15, bufBack:20,
-  docTitle:"訪視行程", attendees:"(一)OOOOO\n(二)OOOOO",
+  user:"", docTitle:"訪視行程", attendees:"(一)OOOOO\n(二)OOOOO",
   originId:"1000", destId:"1070", trainsInfo:{source:"builtin"},
   place:"左營高鐵站大廳層4號出口（高雄市左營區高鐵路105號）"
 };}
@@ -775,7 +793,7 @@ async function run(){
     }
     if(!hasBackend()) rep.push({bad:false,text:"未輸入通行碼：地址用縣市層級粗略定位、午餐是占位，請在設定裡填通行碼以啟用完整功能。"});
     showReport(rep);
-    setStatus("排好了，下方可以拖曳微調。");
+    setStatus("排好了，下方可以拖曳微調。"); logUse("規劃行程");
   }catch(e){ setStatus("規劃失敗："+e.message); }
   finally{ busy=false; $("btnRun").disabled=false; save(); }
 }
@@ -971,6 +989,14 @@ function dayFoot(day,sc){
    案件存檔：Markdown 給人看、JSON 給程式還原，同一個案件 ID 更新同一列
    ========================================================================== */
 let CASE_ID="";
+/* 管考用：射後不理，失敗不影響使用者 */
+function logUse(act){
+  if(!hasBackend()) return;
+  const days=DAYS.filter(d=>(d.stops||[]).length);
+  gas("log",{user:CFG.user||"",act:act,id:CASE_ID,title:CFG.docTitle||"",
+    days:days.length,
+    count:days.reduce((a,d)=>a+d.stops.filter(x=>x.kind==="visit").length,0)}).catch(()=>{});
+}
 function newCaseId(){
   const d=new Date(), p=n=>String(n).padStart(2,"0");
   return "jf"+d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+"-"+Math.random().toString(36).slice(2,8);
@@ -1026,7 +1052,7 @@ function restoreCase(j){
               contact:st.contact||"OOO",meta:st.meta||"",pending:!!st.pending};})}));
   if(!DAYS.length) DAYS=[{date:"",meet:"",place:"",stops:[]}];
   LEGS=legsFromNames(j.legs);
-  bindCfg(); showUrl(); renderDays(); renderPlaces(); updateInfo();
+  bindCfg(); showUrl(); renderConnect(); renderDays(); renderPlaces(); updateInfo();
   renderTrains(); trainStatus(); renderEditor(); save();
 }
 function caseMarkdown(){
@@ -1075,7 +1101,7 @@ async function saveCase(silent){
   if(!days.length){ if(!silent) toast("還沒有行程可以儲存"); return false; }
   if(!CASE_ID) CASE_ID=newCaseId();
   try{
-    const r=await gas("saveCase",{id:CASE_ID,title:CFG.docTitle||"訪視行程",
+    const r=await gas("saveCase",{id:CASE_ID,user:CFG.user||"",title:CFG.docTitle||"訪視行程",
       dates:days.map(d=>shortDate(d.date)).join("、"),
       count:days.reduce((a,d)=>a+d.stops.filter(x=>x.kind==="visit").length,0),
       md:caseMarkdown(), json:JSON.stringify(caseSnapshot())});
@@ -1095,7 +1121,7 @@ function showCaseLink(){
     catch(_){ toast("複製失敗，請手動選取"); }
   };
 }
-$("btnSave").onclick=()=>saveCase(false);
+$("btnSave").onclick=async()=>{ if(await saveCase(false)) logUse("儲存案件"); };
 
 /* Google 地圖路線連結：官方的 Maps URLs 格式，免金鑰，順序照我們排的走 */
 function mapsUrl(day){
@@ -1188,7 +1214,7 @@ function buildTables(){
   }
   return h;
 }
-$("btnPrint").onclick=()=>{$("printView").innerHTML=buildTables();saveCase(true);window.print();};
+$("btnPrint").onclick=()=>{$("printView").innerHTML=buildTables();saveCase(true);logUse("列印");window.print();};
 window.addEventListener("beforeprint",()=>{$("printView").innerHTML=buildTables();});
 $("btnCopy").onclick=async()=>{
   const h=buildTables();
@@ -1441,12 +1467,12 @@ $("btnWord").onclick=()=>{
     a.download=(CFG.docTitle||"訪視行程").replace(/[\\/:*?"<>|]/g,"")+".docx";
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(a.href),2000);
-    toast("Word 檔已下載"); saveCase(true);
+    toast("Word 檔已下載"); saveCase(true); logUse("產生Word");
   }catch(e){ toast("產生失敗："+e.message); }
 };
 
 /* 設定綁定 */
-const CFG_FIELDS=["docTitle","attendees","urlOverride","key","originId","destId","bufOut","bufBack","rating","price","radius","lunchMin","stay","meet","lunchFrom","lunchTo","tolerance","endTarget","endMax"];
+const CFG_FIELDS=["user","docTitle","attendees","urlOverride","key","originId","destId","bufOut","bufBack","rating","price","radius","lunchMin","stay","meet","lunchFrom","lunchTo","tolerance","endTarget","endMax"];
 function fillStations(){
   ["cfg-originId","cfg-destId"].forEach(id=>{
     const n=$(id); if(!n||n.options.length) return;
@@ -1477,13 +1503,12 @@ function bindCfg(){
     n.onchange=e=>{
       const v=e.target.value;
       CFG[k]=(n.type==="number"||k==="price")?(parseFloat(v)||0):v;
-      renderDays(); renderTrains(); trainStatus(); showUrl(); renderEditor(); save();
+      renderDays(); renderTrains(); trainStatus(); showUrl(); renderConnect(); renderEditor(); save();
       if(k==="originId"||k==="destId"||k==="urlOverride"||k==="key") loadTimetable();
     };
   });
 }
-$("btnTest").onclick=async()=>{
-  CFG.urlOverride=$("cfg-urlOverride").value.trim(); CFG.key=$("cfg-key").value.trim(); save();
+async function testConnection(){
   if(!gasUrl()){toast("管理者尚未設定 Apps Script 網址");return;}
   if(!CFG.key){toast("請先輸入通行碼");return;}
   setStatus("測試連線中…",true);
@@ -1498,8 +1523,40 @@ $("btnTest").onclick=async()=>{
     $("status").innerHTML="連線正常　｜　試算表："+esc(d.sheet)
       +"<br>地址定位："+esc(d.geocode)+"<br>午餐搜尋："+esc(d.places);
     toast(bad?"連線正常，但有 API 沒過":"全部正常");
-  }catch(e){setStatus("連線失敗："+e.message);toast("連線失敗");}
+    renderConnect(); loadTimetable();
+  }catch(e){setStatus("連線失敗："+e.message);toast("連線失敗");renderConnect();}
+}
+$("btnTest").onclick=()=>{
+  CFG.urlOverride=$("cfg-urlOverride").value.trim();
+  CFG.key=$("cfg-key").value.trim(); save(); testConnection();
 };
+
+/* 通行碼放在「規劃行程」旁邊：沒連線時才出現，連好就縮成一行狀態 */
+function renderConnect(){
+  const box=$("connectBar"); if(!box) return;
+  if(hasBackend()){
+    box.innerHTML="<span class='ok'>已連線　<b>"+esc(CFG.user||"未填姓名")+"</b>　"
+      +"<button class='linkbtn' type='button'>更改</button></span>";
+    box.querySelector("button").onclick=()=>{
+      $("cfgBox").open=true;
+      const n=$("cfg-key"); if(n.scrollIntoView) n.scrollIntoView({block:"center"}); n.focus();
+    };
+    return;
+  }
+  box.innerHTML="<span class='lbl'>首次使用請先連線</span>"
+    +"<input type='text' id='qk-user' placeholder='你的姓名' value='"+esc(CFG.user||"")+"'>"
+    +"<input type='password' id='qk-key' autocomplete='off' placeholder='通行碼'>"
+    +"<button class='btn' type='button'>連線</button>";
+  const go=()=>{
+    CFG.user=$("qk-user").value.trim();
+    CFG.key=$("qk-key").value.trim();
+    const a=$("cfg-user"), b=$("cfg-key");
+    if(a) a.value=CFG.user; if(b) b.value=CFG.key;
+    save(); testConnection();
+  };
+  box.querySelector("button").onclick=go;
+  box.querySelector("#qk-key").addEventListener("keydown",e=>{ if(e.key==="Enter") go(); });
+}
 $("addDay").onclick=()=>{
   const last=DAYS[DAYS.length-1];
   DAYS.push({date:"",meet:(last&&last.meet)||"",place:(last&&last.place)||CFG.place,stops:[]});
@@ -1517,7 +1574,7 @@ if(!load()){
 }
 if(!DAYS.length) DAYS=[{date:"",meet:"",place:"",stops:[]}];
 while(ITEMS.length<3) ITEMS.push(blankRow());
-bindCfg(); showUrl(); renderDays(); renderPlaces(); updateInfo(); renderTrains(); trainStatus(); renderEditor();
+bindCfg(); showUrl(); renderConnect(); renderDays(); renderPlaces(); updateInfo(); renderTrains(); trainStatus(); renderEditor();
 if(hasBackend()) loadTimetable();
 (async()=>{
   const cid=new URLSearchParams(location.search).get("case");
@@ -1528,7 +1585,7 @@ if(hasBackend()) loadTimetable();
     const r=await gas("loadCase",{id:cid});
     restoreCase(JSON.parse(r.json||"{}"));
     CASE_ID=cid; showCaseLink();
-    setStatus("已開啟案件："+(r.title||cid));
+    setStatus("已開啟案件："+(r.title||cid)); logUse("開啟案件");
   }catch(e){ setStatus("開啟案件失敗："+e.message); }
 })();
 </script>
