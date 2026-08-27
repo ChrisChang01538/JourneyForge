@@ -48,6 +48,10 @@ textarea{width:100%;min-height:130px;line-height:1.7;resize:vertical}
 .grid-f{display:grid;grid-template-columns:repeat(auto-fill,minmax(172px,1fr));gap:11px 14px}
 .grid-f .wide{grid-column:1/-1}
 .f input,.f select{width:100%}
+/* time / date / number / select 的原生高度各不相同，統一鎖住才會對齊 */
+.grid-f .f input,.grid-f .f select,.grid-f .f .btn{height:34px;line-height:normal}
+.grid-f .f textarea{height:auto}
+table.grid input,table.grid select{height:30px;line-height:normal}
 
 table.grid{width:100%;border-collapse:collapse;font-size:13.5px}
 table.grid th{text-align:left;font-size:10.5px;letter-spacing:.12em;color:var(--ink-3);font-weight:700;padding:4px 6px;border-bottom:1px solid var(--rule)}
@@ -81,7 +85,7 @@ details.cfg>summary{padding:11px 15px;cursor:pointer;font-size:14px;font-weight:
 details.cfg>summary::-webkit-details-marker{display:none}
 details.cfg>summary::before{content:"▸ ";color:var(--teal)}
 details.cfg[open]>summary::before{content:"▾ "}
-details.cfg .body{border-top:1px solid var(--rule-soft)}
+details.cfg .body{padding:14px 15px;border-top:1px solid var(--rule-soft)}
 .cfg h3{font-size:12px;letter-spacing:.12em;color:var(--ink-3);text-transform:uppercase;margin:14px 0 8px}
 .cfg h3.first{margin-top:0}
 
@@ -155,14 +159,24 @@ details.cfg .body{border-top:1px solid var(--rule-soft)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 #printView{display:none}
 @media print{
+  @page{size:A4;margin:2cm}
   body{background:#fff}
   .wrap,.toast{display:none!important}
-  #printView{display:block;font-size:12pt}
-  #printView h1{font-size:17pt;text-align:center;margin:0 0 14px}
-  #printView h2{font-size:14pt;margin:14px 0 6px}
-  #printView table{border-collapse:collapse;width:100%;margin-bottom:12px;border:1.5pt solid #000}
-  #printView td,#printView th{border:.5pt solid #000;padding:4px 6px;font-size:11pt;vertical-align:middle}
-  #printView .tcol{width:20%;text-align:center;font-family:var(--font-mono)}
+  #printView{display:block;font-family:"Times New Roman","標楷體",serif;font-size:14pt;color:#000}
+  #printView .doc-title{font-size:18pt;font-weight:700;text-align:center;margin:0 0 14pt}
+  #printView p{margin:0 0 3pt;line-height:1.5}
+  #printView .ind{margin-left:1cm}
+  #printView .bold{font-weight:700}
+  #printView .day-block{page-break-inside:auto}
+  #printView .day-block+.day-block{page-break-before:always}
+  #printView .day-block .ind{page-break-after:avoid;margin-top:6pt}
+  #printView table{border-collapse:collapse;table-layout:fixed;border:1.5pt solid #000;margin:4pt 0 10pt}
+  #printView td,#printView th{border:0.5pt solid #000;padding:2pt 4pt;font-size:12pt;vertical-align:middle;
+    line-height:1.4;word-wrap:break-word}
+  #printView th{background:#f2f2f2;text-align:center;font-weight:700}
+  #printView tr{page-break-inside:avoid}
+  #printView .tcol{text-align:center}
+  #printView .ctr{text-align:center}
 }
 @media (max-width:640px){
   .stop{grid-template-columns:20px 1fr;grid-template-areas:"g c" "f f" "s s"}
@@ -895,37 +909,74 @@ function dayFoot(day,sc){
   return f;
 }
 
-/* 輸出 */
+/* 輸出：列印／複製與 Word 檔共用同一份文件結構 */
 function buildTables(){
-  let h="<h1>訪視行程</h1>"; const rows=[];
-  DAYS.forEach(day=>{
-    if(!(day.stops||[]).length) return;
+  const days=DAYS.filter(d=>(d.stops||[]).length);
+  const CN=["一","二","三","四","五","六","七"];
+  const E=esc;
+  let h='<h1 class="doc-title">'+E(CFG.docTitle||"訪視行程")+'</h1>';
+
+  const dl=days.map(d=>rocLabel(d.date));
+  h+='<p>一、集合日期：'+E(dl[0]||"")+'</p>';
+  dl.slice(1).forEach(x=>h+='<p>　　　　　　　'+E(x)+'</p>');
+
+  const times=[...new Set(days.map(d=>d.meet||CFG.meet))];
+  if(times.length<=1) h+='<p>二、集合時間：'+E(clockText(times[0]||CFG.meet))+'</p>';
+  else{
+    h+='<p>二、集合時間：</p>';
+    days.forEach((d,i)=>h+='<p class="ind">('+CN[i]+')'+E(shortDate(d.date))+'：'+E(clockText(d.meet||CFG.meet))+'</p>');
+  }
+
+  const places=[...new Set(days.map(d=>d.place||CFG.place))];
+  if(places.length<=1) h+='<p>三、集合地點：'+E(places[0]||"")+'</p>';
+  else{
+    h+='<p>三、集合地點：</p>';
+    days.forEach((d,i)=>h+='<p class="ind">('+CN[i]+')'+E(shortDate(d.date))+'：'+E(d.place||CFG.place)+'</p>');
+  }
+
+  h+='<p>四、出席人員：</p>';
+  String(CFG.attendees||"").split(/\r?\n/).map(x=>x.trim()).filter(Boolean)
+    .forEach(x=>h+='<p class="ind">'+E(x)+'</p>');
+
+  h+='<p>五、訪視行程：</p>';
+  days.forEach((day,di)=>{
     const sc=schedule(day);
-    h+="<h2>"+esc(rocLabel(day.date))+"</h2><table><tr><th class='tcol'>時間</th><th>說明</th></tr>";
+    h+='<div class="day-block"><p class="ind bold">('+CN[di]+')'+E(rocLabel(day.date))+'</p>';
+    h+='<table><colgroup><col style="width:3.7cm"><col style="width:13.3cm"></colgroup>';
+    h+='<tr><th>時間</th><th>說明</th></tr>';
     sc.rows.forEach(r=>{
-      if(r.kind==="meet") h+="<tr><td class='tcol'>"+toHM(r.start)+"</td><td>集合-"+esc(day.place||CFG.place)+"</td></tr>";
+      if(r.kind==="meet")
+        h+='<tr><td class="tcol">'+toHM(r.start)+'</td><td>集合-'+E(day.place||CFG.place)+'</td></tr>';
       if(r.kind==="travel"){
         const to=r.ret?("返回"+ORIGIN.name):("至"+destName(r.to));
-        h+="<tr><td class='tcol'>"+toHM(r.start)+"-"+toHM(r.end)+"</td><td>車程，"+esc(to)+"（約"+r.L.mins+"分鐘）</td></tr>";
+        h+='<tr><td class="tcol">'+toHM(r.start)+'-'+toHM(r.end)+'</td><td>車程，'+E(to)+'（約'+r.L.mins+'分鐘）</td></tr>';
       }
       if(r.kind==="stop"){
         const st=r.stop;
-        const main=st.kind==="lunch"
-          ? esc(/^午餐/.test(st.name)?st.name:("午餐："+st.name))
-          : ("<b>"+esc(st.name)+"</b>（"+esc(st.contact||"OOO")+"負責人）");
-        h+="<tr><td class='tcol'>"+toHM(r.start)+"-"+toHM(r.end)+"</td><td>"+main+(st.addr?"<br>"+esc(st.addr):"")+"</td></tr>";
+        const main = st.kind==="lunch"
+          ? E(/^午餐/.test(st.name)?st.name:("午餐："+st.name))
+          : ('<b>'+E(st.name)+'</b>（'+E(st.contact||"OOO")+'負責人）');
+        h+='<tr><td class="tcol">'+toHM(r.start)+'-'+toHM(r.end)+'</td><td>'+main
+          +(st.addr?'<br>'+E(st.addr):'')+'</td></tr>';
       }
     });
-    h+="</table>";
-    if(!trainsReady()) return;
-    const s=pickSouth(day),n=pickNorth(day,sc.end),d=shortDate(day.date);
-    if(s) rows.push([d,"去程",stName(CFG.originId)+"－"+stName(CFG.destId),s.no,s.dep,s.arr]);
-    if(n.best) rows.push([d,"回程",stName(CFG.destId)+"－"+stName(CFG.originId),n.best.no,n.best.dep,n.best.arr]);
+    h+='</table></div>';
   });
-  if(rows.length){
-    h+="<h2>建議車次</h2><table><tr><th>日期</th><th>行程</th><th>內容</th><th>車次</th><th>搭車時間</th><th>抵達時間</th></tr>";
-    rows.forEach(r=>{h+="<tr>"+r.map(c=>"<td style='text-align:center'>"+esc(c)+"</td>").join("")+"</tr>";});
-    h+="</table>";
+
+  if(trainsReady()){
+    const W=["3.7cm","1.6cm","3cm","1.76cm","3.5cm","3.5cm"];
+    let body='';
+    days.forEach(day=>{
+      const sc=schedule(day), s1=pickSouth(day), n1=pickNorth(day,sc.end), d=shortDate(day.date);
+      const line=(a,c,t)=>'<tr>'+[d,a,c,t.no,t.dep,t.arr].map(v=>'<td class="ctr">'+E(v)+'</td>').join('')+'</tr>';
+      if(s1) body+=line("去程",stName(CFG.originId)+"－"+stName(CFG.destId),s1);
+      if(n1.best) body+=line("回程",stName(CFG.destId)+"－"+stName(CFG.originId),n1.best);
+    });
+    if(body){
+      h+='<p>六、建議車次：</p><table><colgroup>'+W.map(w=>'<col style="width:'+w+'">').join('')+'</colgroup>'
+        +'<tr>'+["日期","行程","內容","車次","搭車時間","抵達時間"].map(x=>'<th>'+x+'</th>').join('')+'</tr>'
+        +body+'</table>';
+    }
   }
   return h;
 }
@@ -1033,7 +1084,7 @@ function zipStore(files){
   return out;
 }
 const xesc=t=>String(t==null?"":t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-const FONT='<w:rFonts w:ascii="標楷體" w:eastAsia="標楷體" w:hAnsi="標楷體"/>';
+const FONT='<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:eastAsia="標楷體" w:cs="Times New Roman"/>';
 function wR(t,o){o=o||{};const z=o.size||28;
   return '<w:r><w:rPr>'+FONT+(o.bold?'<w:b/>':'')+'<w:sz w:val="'+z+'"/><w:szCs w:val="'+z+'"/></w:rPr>'
     +'<w:t xml:space="preserve">'+xesc(t)+'</w:t></w:r>';}
@@ -1127,7 +1178,8 @@ function buildDocXml(){
 
   // 六、建議車次
   if(trainsReady()){
-    const T=[1900,900,1700,1000,1900,2238];
+    /* 欄寬 3.7 / 1.6 / 3 / 1.76 / 3.5 / 3.5 公分；1 公分 = 566.93 twips */
+    const T=[3.7,1.6,3,1.76,3.5,3.5].map(cm=>Math.round(cm*566.93));
     let rows=wRow(["日期","行程","內容","車次","搭車時間","抵達時間"]
       .map((h,i)=>wCell(wP(wR(h,{size:24,bold:true}),{align:"center"}),T[i],true)).join(""));
     let any=false;
