@@ -155,6 +155,10 @@ details.cfg .body{padding:14px 15px;border-top:1px solid var(--rule-soft)}
 .trains .no{font-family:var(--font-mono);font-weight:700;color:var(--teal)}
 .trains .tm{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
 .trains .alt{color:var(--ink-3);font-size:12px}
+.maproute{margin-top:9px;border-top:1px dashed var(--rule);padding-top:9px;
+  display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline;font-size:13px}
+.maproute a{color:var(--teal);font-weight:600}
+.maproute .alt{color:var(--ink-3);font-size:12px}
 .footnote{font-size:12.5px;color:var(--ink-2);border-top:1px solid var(--rule);padding-top:12px}
 .footnote p{margin:4px 0}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:9px 18px;border-radius:2px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:60}
@@ -935,7 +939,45 @@ function dayFoot(day,sc){
       ?"<span><span class='no'>"+n.best.no+"</span> <span class='tm'>"+esc(stName(CFG.destId))+" "+n.best.dep+" → "+esc(stName(CFG.originId))+" "+n.best.arr+"</span> <span class='alt'>（緩衝 "+(toMin(n.best.dep)-sc.end)+" 分鐘）</span>"+(n.earliest?" <span class='alt'>｜最早發車 "+n.earliest.no+" "+n.earliest.dep+"→"+n.earliest.arr+"</span>":"")+"</span>"
       :"<span class='alt'>結束太晚，班表裡沒有合適班次</span>")+"</div></div>")
     :("<div class='trains'><span class='alt'>班表資料庫裡沒有 "+esc(stName(CFG.originId))+"－"+esc(stName(CFG.destId))+" 的班次，這一段不提供車次建議</span></div>"));
+
+  const mu=mapsUrl(day);
+  if(mu.url){
+    const bar=el("div","maproute",
+      "<a href='"+esc(mu.url)+"' target='_blank' rel='noopener'>在 Google 地圖開啟這天的路線</a>"
+      +"<button class='linkbtn' type='button'>複製連結</button>"
+      +(mu.cut?"<span class='alt'>（超過 9 個點，只帶前 9 站）</span>":"")
+      +((day.stops||[]).some(x=>x.kind==="lunch"&&x.pending)?"<span class='alt'>午餐未定，未納入路線</span>":""));
+    bar.querySelector("button").onclick=async()=>{
+      try{ await navigator.clipboard.writeText(mu.url); toast("路線連結已複製"); }
+      catch(_){
+        const ta=document.createElement("textarea");ta.value=mu.url;document.body.appendChild(ta);ta.select();
+        try{document.execCommand("copy");toast("路線連結已複製");}catch(e){toast("複製失敗，請長按連結");}
+        ta.remove();
+      }
+    };
+    f.appendChild(bar);
+  }
   return f;
+}
+
+/* Google 地圖路線連結：官方的 Maps URLs 格式，免金鑰，順序照我們排的走 */
+function mapsUrl(day){
+  setOrigin(day);
+  const at=p=>(p&&p.lat!=null&&p.lng!=null)?(p.lat+","+p.lng):((p&&(p.addr||p.name))||"");
+  const o=at(ORIGIN);
+  const pts=[];
+  (day.stops||[]).forEach(st=>{
+    const p=P(st.ref);
+    if(p&&p.pending) return;                 /* 午餐還沒定，跳過中點座標 */
+    const v=at(p); if(v) pts.push(v);
+  });
+  if(!o||!pts.length) return {url:"",cut:0};
+  const cut=Math.max(0,pts.length-9);        /* 網址格式最多 9 個途經點 */
+  const way=pts.slice(0,9);
+  const enc=encodeURIComponent;
+  return {url:"https://www.google.com/maps/dir/?api=1&travelmode=driving"
+    +"&origin="+enc(o)+"&destination="+enc(o)
+    +"&waypoints="+way.map(enc).join("%7C"), cut:cut};
 }
 
 /* 輸出：列印／複製與 Word 檔共用同一份文件結構 */
@@ -1310,6 +1352,11 @@ $("btnTest").onclick=async()=>{
   setStatus("測試連線中…",true);
   try{
     const d=await gas("ping",{deep:true});
+    if(!d || d.sheet===undefined){
+      $("status").innerHTML="連線正常，但<b>後端是舊版</b>。請到 Apps Script 的「部署 → 管理部署作業 → 鉛筆 → 版本：新版本」重新部署（網址不會變）。"
+        +(d&&d.msg?"<br><span class='alt'>舊版回應："+esc(d.msg)+"</span>":"");
+      toast("後端需要重新部署"); return;
+    }
     const bad=[d.geocode,d.places].some(x=>/失敗|沒有/.test(x));
     $("status").innerHTML="連線正常　｜　試算表："+esc(d.sheet)
       +"<br>地址定位："+esc(d.geocode)+"<br>午餐搜尋："+esc(d.places);
