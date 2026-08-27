@@ -24,6 +24,8 @@
  * 試算表的分頁會自動建立，不必手動開：
  *   地點快取   地址 | 緯度 | 經度 | 更新時間
  *   餐廳快取   格號 | 名稱 | 地址 | 緯度 | 經度 | 評分 | 價位 | 營業時間JSON | 更新時間
+ *   案件       案件ID | 標題 | 日期 | 訪視家數 | 建立時間 | 更新時間 | Markdown | JSON
+ *              Markdown 給人看，JSON 給程式還原成可編輯的行程。同一個案件ID 會更新既有列。
  *   班表       方向 | 車次 | 行駛日 | 十二個站別欄位 | 更新日期
  *              一列一班車。站別欄位填該班車在那一站的停靠時刻：
  *                空白        該站不停
@@ -48,6 +50,9 @@ function doPost(e) {
       case 'geocode': out = { ok: true, data: geocode_(req.addresses || []) }; break;
       case 'lunch':   out = { ok: true, data: lunch_(req) }; break;
       case 'timetable': out = { ok: true, data: timetable_(req) }; break;
+      case 'saveCase':  out = { ok: true, data: saveCase_(req) }; break;
+      case 'loadCase':  out = { ok: true, data: loadCase_(req) }; break;
+      case 'listCases': out = { ok: true, data: listCases_() }; break;
       default: throw new Error('不認得的 action：' + req.action);
     }
   } catch (err) {
@@ -232,6 +237,53 @@ function filterOpen_(list, req) {
     });
   });
   return (ok.length ? ok : list).slice(0, 5);
+}
+
+/* ========================= 案件存檔 ========================= */
+var CASE_HEADER = ['案件ID', '標題', '日期', '訪視家數', '建立時間', '更新時間', 'Markdown', 'JSON'];
+
+function saveCase_(req) {
+  if (!req.id) throw new Error('缺少案件 ID');
+  var sh = sheet_('案件', CASE_HEADER);
+  var rows = sh.getDataRange().getValues();
+  var now = new Date();
+  var row = [req.id, req.title || '', req.dates || '', req.count || 0, now, now,
+             req.md || '', req.json || ''];
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]) === String(req.id)) {
+      row[4] = rows[i][4] || now;                       // 建立時間不覆蓋
+      sh.getRange(i + 1, 1, 1, CASE_HEADER.length).setValues([row]);
+      return { id: req.id, mode: '更新' };
+    }
+  }
+  sh.appendRow(row);
+  return { id: req.id, mode: '新增' };
+}
+
+function loadCase_(req) {
+  var sh = sheet_('案件', CASE_HEADER);
+  var rows = sh.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]) === String(req.id)) {
+      return { id: rows[i][0], title: rows[i][1], json: String(rows[i][7] || '') };
+    }
+  }
+  throw new Error('找不到這個案件：' + req.id);
+}
+
+/** 最近 30 筆，新的在前 */
+function listCases_() {
+  var sh = sheet_('案件', CASE_HEADER);
+  var rows = sh.getDataRange().getValues(), out = [];
+  for (var i = rows.length - 1; i >= 1 && out.length < 30; i--) {
+    if (!rows[i][0]) continue;
+    var u = rows[i][5];
+    out.push({
+      id: rows[i][0], title: rows[i][1], dates: rows[i][2], count: rows[i][3],
+      updated: (u instanceof Date) ? Utilities.formatDate(u, 'Asia/Taipei', 'yyyy-MM-dd HH:mm') : String(u || '')
+    });
+  }
+  return out;
 }
 
 /* ========================= 高鐵班表 ========================= */

@@ -155,6 +155,11 @@ details.cfg .body{padding:14px 15px;border-top:1px solid var(--rule-soft)}
 .trains .no{font-family:var(--font-mono);font-weight:700;color:var(--teal)}
 .trains .tm{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
 .trains .alt{color:var(--ink-3);font-size:12px}
+.casebox{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;font-size:13px;
+  background:var(--surface);border:1px solid var(--rule);padding:10px 15px;margin-bottom:18px}
+.casebox:empty{display:none}
+.casebox .lbl{font-size:10.5px;letter-spacing:.14em;color:var(--ink-3);font-weight:700}
+.casebox code{font-family:var(--font-mono);font-size:12px;color:var(--teal);word-break:break-all}
 .maproute{margin-top:9px;border-top:1px dashed var(--rule);padding-top:9px;
   display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline;font-size:13px}
 .maproute a{color:var(--teal);font-weight:600}
@@ -201,6 +206,7 @@ details.cfg .body{padding:14px 15px;border-top:1px solid var(--rule-soft)}
       <p class="sub">填好日期與地點，按規劃。分天、順序、午餐、車次都會自動排，排完可以拖曳微調。</p>
     </div>
     <div class="toolbar">
+      <button class="btn" id="btnSave">儲存案件</button>
       <button class="btn" id="btnCopy">複製行程表</button>
       <button class="btn" id="btnWord">產生 Word 檔</button>
       <button class="btn btn-primary" id="btnPrint">列印 / 存成 PDF</button>
@@ -296,6 +302,7 @@ details.cfg .body{padding:14px 15px;border-top:1px solid var(--rule-soft)}
     <div class="status" id="status">按下去會依地點分天、決定順序、插午餐、配車次。</div>
   </div>
 
+  <div class="casebox" id="caseBox"></div>
   <div id="reportBox"></div>
   <div id="days"></div>
 
@@ -960,6 +967,136 @@ function dayFoot(day,sc){
   return f;
 }
 
+/* ==========================================================================
+   案件存檔：Markdown 給人看、JSON 給程式還原，同一個案件 ID 更新同一列
+   ========================================================================== */
+let CASE_ID="";
+function newCaseId(){
+  const d=new Date(), p=n=>String(n).padStart(2,"0");
+  return "jf"+d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+"-"+Math.random().toString(36).slice(2,8);
+}
+const caseLink=id=>location.origin+location.pathname+"?case="+encodeURIComponent(id);
+
+/* 車程覆寫是用臨時 id 當鍵，存檔要換成名稱才還原得回來 */
+function legsToNames(){
+  const o={};
+  Object.keys(LEGS).forEach(k=>{
+    const q=k.split("|");
+    const n=x=>x==="origin"?"origin":((PLACES[x]||{}).name||"");
+    const a=n(q[0]), b=n(q[1]);
+    if(a&&b) o[[a,b].sort().join("|")]=LEGS[k];
+  });
+  return o;
+}
+function legsFromNames(m){
+  const byName={origin:"origin"};
+  Object.keys(PLACES).forEach(id=>{ if(PLACES[id].name) byName[PLACES[id].name]=id; });
+  const o={};
+  Object.keys(m||{}).forEach(k=>{
+    const q=k.split("|"), a=byName[q[0]], b=byName[q[1]];
+    if(a&&b) o[legKey(a,b)]=m[k];
+  });
+  return o;
+}
+function caseSnapshot(){
+  return {v:1, docTitle:CFG.docTitle, attendees:CFG.attendees,
+    originId:CFG.originId, destId:CFG.destId,
+    settings:{stay:CFG.stay,meet:CFG.meet,lunchFrom:CFG.lunchFrom,lunchTo:CFG.lunchTo,
+      tolerance:CFG.tolerance,endTarget:CFG.endTarget,endMax:CFG.endMax,lunchMin:CFG.lunchMin,
+      bufOut:CFG.bufOut,bufBack:CFG.bufBack,rating:CFG.rating,price:CFG.price,radius:CFG.radius},
+    legs:legsToNames(),
+    rows:filledRows().map(i=>({name:i.name,addr:i.addr,lat:i.lat,lng:i.lng,exact:!!i.exact})),
+    days:DAYS.map(d=>({date:d.date,meet:d.meet,place:d.place,
+      stops:(d.stops||[]).map(st=>{const p=P(st.ref)||{};
+        return {kind:st.kind,name:st.name,addr:st.addr,stay:st.stay,contact:st.contact||"OOO",
+                meta:st.meta||"",pending:!!st.pending,lat:p.lat,lng:p.lng};})}))};
+}
+function restoreCase(j){
+  Object.assign(CFG,{docTitle:j.docTitle||CFG.docTitle,attendees:j.attendees||CFG.attendees,
+    originId:j.originId||CFG.originId,destId:j.destId||CFG.destId}, j.settings||{});
+  ITEMS=(j.rows||[]).map(r=>{const o=blankRow();
+    o.name=r.name||"";o.addr=r.addr||"";o.lat=r.lat;o.lng=r.lng;o.exact=!!r.exact;
+    o.level=r.exact?"精確":(r.lat!=null?"區":"無");return o;});
+  while(ITEMS.length<3) ITEMS.push(blankRow());
+  PLACES={};
+  DAYS=(j.days||[]).map(d=>({date:d.date||"",meet:d.meet||"",place:d.place||"",
+    stops:(d.stops||[]).map(st=>{const id="c"+(++uid);
+      PLACES[id]={name:st.name,addr:st.addr,lat:st.lat,lng:st.lng,pending:!!st.pending,stay:st.stay};
+      return {kind:st.kind,ref:id,name:st.name,addr:st.addr,stay:st.stay,
+              contact:st.contact||"OOO",meta:st.meta||"",pending:!!st.pending};})}));
+  if(!DAYS.length) DAYS=[{date:"",meet:"",place:"",stops:[]}];
+  LEGS=legsFromNames(j.legs);
+  bindCfg(); showUrl(); renderDays(); renderPlaces(); updateInfo();
+  renderTrains(); trainStatus(); renderEditor(); save();
+}
+function caseMarkdown(){
+  const days=DAYS.filter(d=>(d.stops||[]).length), CN=["一","二","三","四","五","六","七"];
+  let m="# "+(CFG.docTitle||"訪視行程")+"\n\n";
+  m+="- 集合日期："+days.map(d=>rocLabel(d.date)).join("、")+"\n";
+  const t=[...new Set(days.map(d=>d.meet||CFG.meet))];
+  m+="- 集合時間："+t.map(clockText).join("／")+"\n";
+  const pl=[...new Set(days.map(d=>d.place||CFG.place))];
+  m+="- 集合地點："+pl.join("／")+"\n";
+  m+="- 出席人員："+String(CFG.attendees||"").split(/\r?\n/).map(x=>x.trim()).filter(Boolean).join("；")+"\n\n";
+  days.forEach((day,di)=>{
+    const sc=schedule(day);
+    m+="## ("+CN[di]+") "+rocLabel(day.date)+"\n\n| 時間 | 說明 |\n| --- | --- |\n";
+    sc.rows.forEach(r=>{
+      if(r.kind==="meet") m+="| "+toHM(r.start)+" | 集合-"+(day.place||CFG.place)+" |\n";
+      if(r.kind==="travel"){
+        const to=r.ret?("返回"+ORIGIN.name):("至"+destName(r.to));
+        m+="| "+toHM(r.start)+"-"+toHM(r.end)+" | 車程，"+to+"（約"+r.L.mins+"分鐘） |\n";
+      }
+      if(r.kind==="stop"){
+        const st=r.stop;
+        const head=st.kind==="lunch"?(/^午餐/.test(st.name)?st.name:("午餐："+st.name))
+          :("**"+st.name+"**（"+(st.contact||"OOO")+"負責人）");
+        m+="| "+toHM(r.start)+"-"+toHM(r.end)+" | "+head+(st.addr?"<br>"+st.addr:"")+" |\n";
+      }
+    });
+    const mu=mapsUrl(day);
+    if(mu.url) m+="\n[在 Google 地圖開啟這天的路線]("+mu.url+")\n";
+    m+="\n";
+  });
+  if(trainsReady()){
+    let body="";
+    days.forEach(day=>{
+      const sc=schedule(day),s1=pickSouth(day),n1=pickNorth(day,sc.end),dd=shortDate(day.date);
+      if(s1) body+="| "+dd+" | 去程 | "+stName(CFG.originId)+"－"+stName(CFG.destId)+" | "+s1.no+" | "+s1.dep+" | "+s1.arr+" |\n";
+      if(n1.best) body+="| "+dd+" | 回程 | "+stName(CFG.destId)+"－"+stName(CFG.originId)+" | "+n1.best.no+" | "+n1.best.dep+" | "+n1.best.arr+" |\n";
+    });
+    if(body) m+="## 建議車次\n\n| 日期 | 行程 | 內容 | 車次 | 搭車時間 | 抵達時間 |\n| --- | --- | --- | --- | --- | --- |\n"+body+"\n";
+  }
+  return m;
+}
+async function saveCase(silent){
+  if(!hasBackend()){ if(!silent) toast("要先在設定填通行碼才能存到資料庫"); return false; }
+  const days=DAYS.filter(d=>(d.stops||[]).length);
+  if(!days.length){ if(!silent) toast("還沒有行程可以儲存"); return false; }
+  if(!CASE_ID) CASE_ID=newCaseId();
+  try{
+    const r=await gas("saveCase",{id:CASE_ID,title:CFG.docTitle||"訪視行程",
+      dates:days.map(d=>shortDate(d.date)).join("、"),
+      count:days.reduce((a,d)=>a+d.stops.filter(x=>x.kind==="visit").length,0),
+      md:caseMarkdown(), json:JSON.stringify(caseSnapshot())});
+    try{ history.replaceState(null,"",caseLink(CASE_ID)); }catch(_){}
+    showCaseLink();
+    if(!silent) toast("案件已"+(r.mode||"儲存")+"：" + CASE_ID);
+    return true;
+  }catch(e){ toast("儲存失敗："+e.message); return false; }
+}
+function showCaseLink(){
+  const box=$("caseBox"); if(!box) return;
+  if(!CASE_ID){ box.innerHTML=""; return; }
+  box.innerHTML="<span class='lbl'>案件連結</span><code>"+esc(caseLink(CASE_ID))+"</code>"
+    +"<button class='linkbtn' type='button'>複製</button>";
+  box.querySelector("button").onclick=async()=>{
+    try{ await navigator.clipboard.writeText(caseLink(CASE_ID)); toast("連結已複製"); }
+    catch(_){ toast("複製失敗，請手動選取"); }
+  };
+}
+$("btnSave").onclick=()=>saveCase(false);
+
 /* Google 地圖路線連結：官方的 Maps URLs 格式，免金鑰，順序照我們排的走 */
 function mapsUrl(day){
   setOrigin(day);
@@ -1051,7 +1188,7 @@ function buildTables(){
   }
   return h;
 }
-$("btnPrint").onclick=()=>{$("printView").innerHTML=buildTables();window.print();};
+$("btnPrint").onclick=()=>{$("printView").innerHTML=buildTables();saveCase(true);window.print();};
 window.addEventListener("beforeprint",()=>{$("printView").innerHTML=buildTables();});
 $("btnCopy").onclick=async()=>{
   const h=buildTables();
@@ -1304,7 +1441,7 @@ $("btnWord").onclick=()=>{
     a.download=(CFG.docTitle||"訪視行程").replace(/[\\/:*?"<>|]/g,"")+".docx";
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(a.href),2000);
-    toast("Word 檔已下載");
+    toast("Word 檔已下載"); saveCase(true);
   }catch(e){ toast("產生失敗："+e.message); }
 };
 
@@ -1382,6 +1519,18 @@ if(!DAYS.length) DAYS=[{date:"",meet:"",place:"",stops:[]}];
 while(ITEMS.length<3) ITEMS.push(blankRow());
 bindCfg(); showUrl(); renderDays(); renderPlaces(); updateInfo(); renderTrains(); trainStatus(); renderEditor();
 if(hasBackend()) loadTimetable();
+(async()=>{
+  const cid=new URLSearchParams(location.search).get("case");
+  if(!cid) return;
+  if(!hasBackend()){ setStatus("要開啟案件 "+cid+"，請先在設定填通行碼"); $("cfgBox").open=true; return; }
+  setStatus("讀取案件 "+cid+"…",true);
+  try{
+    const r=await gas("loadCase",{id:cid});
+    restoreCase(JSON.parse(r.json||"{}"));
+    CASE_ID=cid; showCaseLink();
+    setStatus("已開啟案件："+(r.title||cid));
+  }catch(e){ setStatus("開啟案件失敗："+e.message); }
+})();
 </script>
 </body>
 </html>
