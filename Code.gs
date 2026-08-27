@@ -44,7 +44,7 @@ function doPost(e) {
     if (need && req.key !== need) throw new Error('通行碼不正確');
 
     switch (req.action) {
-      case 'ping':    out = { ok: true, data: status_() }; break;
+      case 'ping':    out = { ok: true, data: status_(req) }; break;
       case 'geocode': out = { ok: true, data: geocode_(req.addresses || []) }; break;
       case 'lunch':   out = { ok: true, data: lunch_(req) }; break;
       case 'timetable': out = { ok: true, data: timetable_(req) }; break;
@@ -77,10 +77,29 @@ function fresh_(ts, days) {
 function today_() {
   return Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd');
 }
-function status_() {
-  var has = function (k) { return prop_(k) ? '已設定' : '未設定'; };
-  SpreadsheetApp.openById(prop_('SHEET_ID'));   // 讀不到會直接丟錯
-  return { msg: '試算表可讀寫；地圖金鑰' + has('MAPS_KEY') + '，TDX 金鑰' + has('TDX_CLIENT_ID') };
+/** deep=true 時會真的各打一次 API，才知道金鑰與權限到底有沒有問題 */
+function status_(req) {
+  var out = { sheet: '', geocode: '', places: '', tdx: prop_('TDX_CLIENT_ID') ? '已設定' : '未設定' };
+  try { SpreadsheetApp.openById(prop_('SHEET_ID')); out.sheet = '可讀寫'; }
+  catch (e) { out.sheet = '失敗：' + e.message; }
+
+  var key = prop_('MAPS_KEY');
+  if (!key) { out.geocode = out.places = '未設定 MAPS_KEY'; return out; }
+  if (!req || !req.deep) { out.geocode = out.places = '金鑰已設定（未實測）'; return out; }
+
+  try {
+    var g = geocode_(['高雄市左營區高鐵路105號']);
+    out.geocode = (g[0] && g[0].lat != null)
+      ? ('正常（' + g[0].lat.toFixed(4) + ', ' + g[0].lng.toFixed(4) + '）')
+      : '呼叫成功但沒有回傳座標';
+  } catch (e) { out.geocode = '失敗：' + e.message; }
+
+  try {
+    var pl = placesSearch_(key, 22.6873, 120.3074, { rating: 4, price: 2, radius: 3000 });
+    out.places = pl.length ? ('正常，找到 ' + pl.length + ' 家（例：' + pl[0].name + '）')
+                           : '呼叫成功但沒有結果';
+  } catch (e) { out.places = '失敗：' + e.message; }
+  return out;
 }
 
 /* ========================= 地址定位 ========================= */

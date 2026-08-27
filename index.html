@@ -723,6 +723,7 @@ async function run(){
     DAYS.filter(d=>!d.date).forEach(d=>d.stops=[]);
     renderEditor();
 
+    let lunchErr="", lunchOk=0;
     if(hasBackend()){
       setStatus("搜尋午餐地點…",true);
       for(const d of days){
@@ -739,8 +740,9 @@ async function run(){
             lu.meta=[g.rating?("★"+Number(g.rating).toFixed(1)):"",g.price||"",g.note||""].filter(Boolean).join("　");
             const row=schedule(d).rows.find(x=>x.kind==="stop"&&x.stop===lu);
             if(row) lu.stay=Math.max(+CFG.lunchMin,toMin(CFG.lunchTo)-row.start);
-          }
-        }catch(_){ /* 單日失敗不中斷 */ }
+            lunchOk++;
+          }else if(!lunchErr) lunchErr="這一帶找不到符合條件的餐廳";
+        }catch(e){ if(!lunchErr) lunchErr=e.message; }
       }
       renderEditor();
     }
@@ -753,6 +755,13 @@ async function run(){
     });
     if(out.left.length) rep.push({bad:true,text:"排不進去："+out.left.map(x=>P(x).name).join("、")+
       "。需要多一天、縮短停留，或放寬最晚結束時間。"});
+    if(hasBackend()){
+      const exact=rows.filter(r=>r.exact).length;
+      if(exact<rows.length) rep.push({bad:true,
+        text:"地址精確定位 "+exact+"/"+rows.length+" 筆，其餘用縣市層級推估，請檢查地址是否完整"});
+      const need=days.filter(d=>d.stops.some(s2=>s2.kind==="lunch")).length;
+      if(lunchErr) rep.push({bad:true,text:"午餐搜尋失敗："+lunchErr+"（"+lunchOk+"/"+need+" 天成功，其餘維持占位）"});
+    }
     if(!hasBackend()) rep.push({bad:false,text:"未輸入通行碼：地址用縣市層級粗略定位、午餐是占位，請在設定裡填通行碼以啟用完整功能。"});
     showReport(rep);
     setStatus("排好了，下方可以拖曳微調。");
@@ -1299,8 +1308,13 @@ $("btnTest").onclick=async()=>{
   if(!gasUrl()){toast("管理者尚未設定 Apps Script 網址");return;}
   if(!CFG.key){toast("請先輸入通行碼");return;}
   setStatus("測試連線中…",true);
-  try{const d=await gas("ping");setStatus("連線正常："+((d&&d.msg)||"OK"));toast("連線正常");}
-  catch(e){setStatus("連線失敗："+e.message);toast("連線失敗");}
+  try{
+    const d=await gas("ping",{deep:true});
+    const bad=[d.geocode,d.places].some(x=>/失敗|沒有/.test(x));
+    $("status").innerHTML="連線正常　｜　試算表："+esc(d.sheet)
+      +"<br>地址定位："+esc(d.geocode)+"<br>午餐搜尋："+esc(d.places);
+    toast(bad?"連線正常，但有 API 沒過":"全部正常");
+  }catch(e){setStatus("連線失敗："+e.message);toast("連線失敗");}
 };
 $("addDay").onclick=()=>{
   const last=DAYS[DAYS.length-1];
