@@ -171,6 +171,16 @@ details.cfg .body{padding:14px 15px;border-top:1px solid var(--rule-soft)}
 .trains .no{font-family:var(--font-mono);font-weight:700;color:var(--teal)}
 .trains .tm{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
 .trains .alt{color:var(--ink-3);font-size:12px}
+.docinfo{border-top:1px dashed var(--rule);margin-top:12px;padding-top:12px;
+  display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
+@media (max-width:640px){.docinfo{grid-template-columns:1fr}}
+.docinfo .dl{grid-column:1/-1;font-size:10.5px;letter-spacing:.14em;color:var(--ink-3);
+  text-transform:uppercase;font-weight:700}
+.docinfo.todo .dl{color:var(--warn)}
+.docinfo .mark{margin-left:8px;letter-spacing:0;text-transform:none;font-size:11px;
+  background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn);padding:1px 7px;border-radius:2px}
+.docinfo input,.docinfo textarea{width:100%}
+.docinfo textarea{min-height:64px;resize:vertical}
 .casebox{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;font-size:13px;
   background:var(--surface);border:1px solid var(--rule);padding:10px 15px;margin-bottom:18px}
 .casebox:empty{display:none}
@@ -219,7 +229,7 @@ details.cfg .body{padding:14px 15px;border-top:1px solid var(--rule-soft)}
   <header class="masthead">
     <div>
       <h1>行程規劃工具</h1>
-      <p class="sub">填好日期與地點，按規劃。分天、順序、午餐、車次都會自動排，排完可以拖曳微調。　<a href="sop.html" target="_blank" rel="noopener">操作說明</a></p>
+      <p class="sub">填好日期與地點，按規劃。分天、順序、午餐、車次都會自動排，排完可以拖曳微調。　<a href="guide.html" target="_blank" rel="noopener">新手指南</a>　<a href="sop.html" target="_blank" rel="noopener">系統說明</a></p>
     </div>
     <div class="toolbar">
       <button class="btn" id="btnSave">儲存案件</button>
@@ -600,7 +610,7 @@ function permute(a){ if(a.length<=1) return [a]; const o=[];
   a.forEach((x,i)=>permute(a.slice(0,i).concat(a.slice(i+1))).forEach(p=>o.push([x].concat(p)))); return o; }
 function bestOrder(day,ids){
   if(ids.length<=1) return ids.slice();
-  if(ids.length<=7){
+  if(ids.length<=6){
     let best=null,bE=Infinity,bT=Infinity;
     permute(ids).forEach(p=>{const v=evalDay(day,p);
       if(v.end<bE||(v.end===bE&&v.travel<bT)){bE=v.end;bT=v.travel;best=p;}});
@@ -631,6 +641,12 @@ function partitionExact(days,ids){
     if(!mask) r={cost:EMPTY_DAY,order:[]};
     else{
       const list=[]; for(let j=0;j<n;j++) if(mask&(1<<j)) list.push(ids[j]);
+      /* 先用下界擋掉「一天塞太多家」的組合：停留時間＋午餐＋最少車程若已超過可用時段，
+         怎麼排都不可能，就不必再去算最佳順序——那是整個演算法的效能瓶頸 */
+      const win=endMax-toMin(days[i].meet||CFG.meet);
+      let need=(+CFG.lunchMin||60)+(list.length+1)*10;
+      list.forEach(id=>{ need+=(+((PLACES[id]||{}).stay)||+CFG.stay); });
+      if(need>win){ r={cost:Infinity,order:null}; dc.set(k,r); return r; }
       const order=bestOrder(days[i],list), v=evalDay(days[i],order);
       r=v.end>endMax?{cost:Infinity,order:null}
         :{cost:v.travel+2*Math.max(0,v.end-endT),order};
@@ -671,6 +687,60 @@ function partitionGreedy(days,ids){
     if(bi>=0) assign[bi]=bo; else left.push(x);
   });
   return {assign,left};
+}
+
+/* ---- 排不進去時，實際試算哪一種調整才塞得下 ---- */
+function feasible(days, ids, opt){
+  const bakEnd=CFG.endMax, bakMeet=days.map(d=>d.meet), bakStay={};
+  ids.forEach(id=>{ if(PLACES[id]) bakStay[id]=PLACES[id].stay; });
+  try{
+    if(opt.endMax) CFG.endMax=opt.endMax;
+    if(opt.meet) days.forEach(d=>d.meet=opt.meet);
+    if(opt.stay) ids.forEach(id=>{ if(PLACES[id]) PLACES[id].stay=opt.stay; });
+    let dd=days;
+    if(opt.extra){
+      const proto=days[days.length-1]||{};
+      dd=days.concat(Array.from({length:opt.extra},()=>(
+        {date:"",meet:opt.meet||proto.meet||CFG.meet,place:proto.place||CFG.place,stops:[]})));
+    }
+    const r=(ids.length<=12&&dd.length<=6)?partitionExact(dd,ids):partitionGreedy(dd,ids);
+    return !!(r && r.left.length===0);
+  }catch(_){ return false; }
+  finally{
+    CFG.endMax=bakEnd;
+    days.forEach((d,i)=>{ d.meet=bakMeet[i]; });
+    ids.forEach(id=>{ if(PLACES[id]&&bakStay[id]!=null) PLACES[id].stay=bakStay[id]; });
+  }
+}
+async function suggestFix(days, ids){
+  const out=[];
+  if(ids.length>9||days.length>4) return out;        // 規模太大時試算成本過高
+  let budget = ids.length<=7 ? 12 : 6;               // 限制試算次數，避免畫面卡住
+  async function tryIt(opt,msg){
+    if(budget<=0||out.length>=3) return true;
+    budget--; await sleep(0);
+    if(feasible(days,ids,opt)){ out.push(msg); return true; }
+    return false;
+  }
+  const meetNow=toMin(days[0].meet||CFG.meet);
+  for(const m of [30,60,90]){
+    const t=meetNow-m; if(t<6*60) break;
+    if(await tryIt({meet:toHM(t)},"集合時間提早到 "+toHM(t)+"（各天都提早）就排得進去")) break;
+  }
+  const endNow=toMin(CFG.endMax);
+  for(const m of [30,60,90]){
+    const t=endNow+m; if(t>21*60) break;
+    if(await tryIt({endMax:toHM(t)},"最晚結束時間放寬到 "+toHM(t)+" 就排得進去")) break;
+  }
+  const stayNow=+CFG.stay||60;
+  for(const v of [45,30]){
+    if(v>=stayNow) continue;
+    if(await tryIt({stay:v},"每廠停留縮短到 "+v+" 分鐘就排得進去")) break;
+  }
+  for(const e of [1,2]){
+    if(await tryIt({extra:e},"再加 "+e+" 天就排得進去")) break;
+  }
+  return out;
 }
 
 /* 車次 */
@@ -782,8 +852,17 @@ async function run(){
       rep.push({bad:false,text:rocLabel(d.date)+"：訪視 "+v+" 廠，"+toHM(sc.end)+" 結束"+
         (sc.end>toMin(CFG.endTarget)?"（超過目標 "+CFG.endTarget+"）":"")});
     });
-    if(out.left.length) rep.push({bad:true,text:"排不進去："+out.left.map(x=>P(x).name).join("、")+
-      "。需要多一天、縮短停留，或放寬最晚結束時間。"});
+    if(out.left.length){
+      rep.push({bad:true,text:"有 "+out.left.length+" 家排不進去："+out.left.map(x=>P(x).name).join("、")});
+      setStatus("試算可行的調整方式…",true); await sleep(0);
+      const fixes=await suggestFix(days,ids);
+      if(fixes.length){
+        rep.push({bad:false,text:"以下任一種調整就能全部排入（實際試算過）："});
+        fixes.forEach(f=>rep.push({bad:false,text:"　・"+f}));
+      }else{
+        rep.push({bad:false,text:"提早集合、延後結束、縮短停留、加一到兩天都試算過了，還是排不下。請把地點拆成兩個梯次。"});
+      }
+    }
     if(hasBackend()){
       const exact=rows.filter(r=>r.exact).length;
       if(exact<rows.length) rep.push({bad:true,
@@ -803,6 +882,21 @@ function showReport(rep){
   c.appendChild(el("header",null,"<h2>規劃結果</h2><span class='hint'>下方行程可以直接拖曳微調，時間會跟著重算。</span>"));
   const b=el("div","body");
   b.appendChild(el("ul","report",rep.map(r=>"<li class='"+(r.bad?"bad":"")+"'>"+esc(r.text)+"</li>").join("")));
+
+  /* 這兩欄每個案子都要改，放在設定裡多數人不會去點，所以直接放在結果上方 */
+  const needFix=/O{3,}/i.test(CFG.attendees||"") || !String(CFG.docTitle||"").trim() || CFG.docTitle==="訪視行程";
+  const dz=el("div","docinfo"+(needFix?" todo":""),
+    "<div class='dl'>發文前要填的兩欄"+(needFix?"<span class='mark'>尚未填寫</span>":"")+"</div>"+
+    "<div class='f'><label>文件標題（Word 的大標，也是檔名）</label>"+
+      "<input type='text' id='rp-title' placeholder='例：環境部資源循環署訪視行程（乙計畫）' value='"+esc(CFG.docTitle||"")+"'></div>"+
+    "<div class='f'><label>出席人員（一行一項，會排進「四、出席人員」）</label>"+
+      "<textarea id='rp-att' rows='3'>"+esc(CFG.attendees||"")+"</textarea></div>");
+  dz.querySelector("#rp-title").oninput=e=>{
+    CFG.docTitle=e.target.value; const n=$("cfg-docTitle"); if(n) n.value=e.target.value; save(); };
+  dz.querySelector("#rp-att").oninput=e=>{
+    CFG.attendees=e.target.value; const n=$("cfg-attendees"); if(n) n.value=e.target.value; save(); };
+  b.appendChild(dz);
+
   c.appendChild(b); box.appendChild(c);
 }
 
@@ -1457,8 +1551,14 @@ function makeDocx(){
     F('word/_rels/document.xml.rels',drels),F('word/styles.xml',styles),
     F('word/document.xml',buildDocXml())]);
 }
+function docInfoWarn(){
+  if(/O{3,}/i.test(CFG.attendees||"")) return "出席人員還是預設的 OOOOO，記得改成實際名單";
+  if(!String(CFG.docTitle||"").trim()||CFG.docTitle==="訪視行程") return "文件標題還沒改，請填實際的計畫名稱";
+  return "";
+}
 $("btnWord").onclick=()=>{
   if(!DAYS.some(d=>(d.stops||[]).length)){ toast("還沒有行程可以輸出"); return; }
+  const wmsg=docInfoWarn(); if(wmsg) toast(wmsg);
   try{
     const bytes=makeDocx();
     const blob=new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
@@ -1504,6 +1604,8 @@ function bindCfg(){
       const v=e.target.value;
       CFG[k]=(n.type==="number"||k==="price")?(parseFloat(v)||0):v;
       renderDays(); renderTrains(); trainStatus(); showUrl(); renderConnect(); renderEditor(); save();
+      if(k==="docTitle"){const n=$("rp-title"); if(n&&n.value!==CFG.docTitle) n.value=CFG.docTitle;}
+      if(k==="attendees"){const n=$("rp-att"); if(n&&n.value!==CFG.attendees) n.value=CFG.attendees;}
       if(k==="originId"||k==="destId"||k==="urlOverride"||k==="key") loadTimetable();
     };
   });

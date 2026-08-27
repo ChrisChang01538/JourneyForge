@@ -1,8 +1,12 @@
 # JourneyForge
 
-訪視行程規劃工具。貼上要訪視的單位，自動分天、排順序、插午餐、配高鐵車次，排完可以拖曳微調，再輸出成公文用的行程表。
+行程規劃工具。貼上要訪視的單位，自動分天、排順序、插午餐、配高鐵車次，排完可以拖曳微調，再輸出成公文用的行程表。
 
 **使用網址：** https://chrischang01538.github.io/JourneyForge/
+
+**新手指南：** https://chrischang01538.github.io/JourneyForge/guide.html　（第一次操作看這份）
+
+**系統說明：** https://chrischang01538.github.io/JourneyForge/sop.html　（管理者與管考用）
 
 ---
 
@@ -53,6 +57,8 @@ Apps Script 網址已經寫在程式裡，一般不需要動；要改的話在�
 |---|---|
 | `index.html` | 前端，單檔靜態網頁，GitHub Pages 直接發布 |
 | `Code.gs` | Google Apps Script 後端：地址定位、午餐搜尋、班表讀取 |
+| `guide.html` | 新手操作指南，帶著走完一次完整流程 |
+| `sop.html` | 系統說明，寫給管理者與需要看管考資料的人 |
 | `班表_全量.csv` | 高鐵班表起始資料，匯入試算表「班表」分頁用 |
 
 ## 維護者備忘

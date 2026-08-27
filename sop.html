@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>行程規劃工具　操作說明</title>
+<style>
+:root{
+  --ink:#15202a; --ink-2:#48606f; --ink-3:#7d94a1;
+  --paper:#e9eef1; --surface:#fff; --rule:#c7d4db; --rule-soft:#dfe7eb;
+  --teal:#0f6b68; --teal-soft:#e0efee;
+  --sand:#e8dcbd; --sand-ink:#7a6323;
+  --alert:#ab3226; --alert-soft:#fbe9e6;
+  --warn:#9a6b1c; --warn-soft:#fbf1de;
+  --font-ui:"Noto Sans TC","PingFang TC","Heiti TC","Microsoft JhengHei",-apple-system,"Segoe UI",sans-serif;
+  --font-mono:ui-monospace,"SFMono-Regular","Roboto Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--font-ui);font-size:15.5px;line-height:1.75;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1040px;margin:0 auto;padding:22px 18px 90px;display:grid;grid-template-columns:220px 1fr;gap:28px}
+@media (max-width:820px){.wrap{grid-template-columns:1fr;gap:12px}}
+
+.masthead{grid-column:1/-1;border-top:3px solid var(--ink);padding-top:13px;margin-bottom:6px;
+  display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between}
+.masthead h1{margin:0;font-size:23px}
+.masthead .sub{margin:3px 0 0;color:var(--ink-2);font-size:13px}
+.masthead .links{white-space:nowrap}
+.masthead a.back{color:var(--teal);font-weight:600;font-size:13px;text-decoration:none;border:1px solid var(--rule);
+  background:var(--surface);padding:7px 13px;border-radius:2px}
+.masthead a.back:hover{background:var(--teal-soft);border-color:var(--teal)}
+
+nav.toc{align-self:start;position:sticky;top:18px;background:var(--surface);border:1px solid var(--rule);padding:13px 14px;font-size:13.5px}
+@media (max-width:820px){nav.toc{position:static}}
+nav.toc h2{margin:0 0 8px;font-size:10.5px;letter-spacing:.16em;color:var(--ink-3);text-transform:uppercase}
+nav.toc ol{margin:0;padding-left:1.15em}
+nav.toc li{margin:3px 0}
+nav.toc a{color:var(--ink-2);text-decoration:none}
+nav.toc a:hover{color:var(--teal)}
+
+main{background:var(--surface);border:1px solid var(--rule);padding:24px 30px 34px;min-width:0}
+@media (max-width:820px){main{padding:18px 16px 26px}}
+main h2{font-size:20px;margin:34px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--ink);scroll-margin-top:20px}
+main h2:first-child{margin-top:0}
+main h3{font-size:16px;margin:22px 0 6px;color:var(--teal)}
+main p{margin:8px 0}
+main ul,main ol{margin:8px 0;padding-left:1.5em}
+main li{margin:4px 0}
+code{font-family:var(--font-mono);font-size:.9em;background:var(--paper);padding:1px 5px;border-radius:2px}
+b,strong{font-weight:700}
+
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
+th,td{border:1px solid var(--rule);padding:7px 10px;vertical-align:top;text-align:left}
+th{background:#edf2f4;font-weight:700;font-size:12.5px;letter-spacing:.04em}
+td:first-child{white-space:nowrap}
+@media (max-width:820px){td:first-child{white-space:normal}}
+
+.note{border-left:3px solid var(--teal);background:var(--teal-soft);padding:10px 14px;margin:14px 0;font-size:14.5px}
+.warn{border-left:3px solid var(--warn);background:var(--warn-soft);padding:10px 14px;margin:14px 0;font-size:14.5px}
+.stop{border-left:3px solid var(--alert);background:var(--alert-soft);padding:10px 14px;margin:14px 0;font-size:14.5px}
+.note p:first-child,.warn p:first-child,.stop p:first-child{margin-top:0}
+.note p:last-child,.warn p:last-child,.stop p:last-child{margin-bottom:0}
+.foot{grid-column:1/-1;font-size:12.5px;color:var(--ink-3);border-top:1px solid var(--rule);padding-top:12px;margin-top:6px}
+
+@media print{
+  @page{size:A4;margin:2cm}
+  body{background:#fff;font-size:11.5pt;line-height:1.6}
+  .wrap{display:block;max-width:none;padding:0}
+  nav.toc,.masthead .links{white-space:nowrap}
+.masthead a.back{display:none}
+  main{border:0;padding:0}
+  main h2{page-break-after:avoid;margin-top:20pt}
+  main h3{page-break-after:avoid}
+  table,tr,.note,.warn,.stop{page-break-inside:avoid}
+  a{color:#000;text-decoration:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div>
+      <h1>行程規劃工具　操作說明</h1>
+      <p class="sub">JourneyForge．版本 1.0．115 年 8 月　｜　本文件寫給系統管理者與需要看管考資料的人；第一次操作請看<a href="guide.html" style="color:var(--teal);font-weight:600">新手指南</a></p>
+    </div>
+    <span class="links"><a class="back" href="guide.html">新手指南</a> <a class="back" href="index.html">← 回到工具</a></span>
+  </header>
+
+  <nav class="toc">
+    <h2>目次</h2>
+    <ol>
+      <li><a href="#a1">目的與適用範圍</a></li>
+      <li><a href="#a2">系統架構</a></li>
+      <li><a href="#a3">角色與權責</a></li>
+      <li><a href="#a4">使用者操作程序</a></li>
+      <li><a href="#a5">管理者維護作業</a></li>
+      <li><a href="#a6">管考與統計</a></li>
+      <li><a href="#a7">疑難排除</a></li>
+      <li><a href="#a8">附錄：預設設定值</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+    <h2 id="a1">壹、目的與適用範圍</h2>
+    <p>本工具用於規劃多點行程並產出公文格式的行程表。使用者貼上受訪單位名稱與地址、指定日期，系統自動完成分天、決定拜訪順序、安排午餐、配對高鐵車次，並輸出 Word 或 PDF。</p>
+    <p>適用於實地訪視、稽核、輔導等需要多點行程安排的作業。</p>
+
+    <h3>系統會自動處理的事</h3>
+    <ul>
+      <li>依地點座標分天，並在每一天內決定最短車程的拜訪順序</li>
+      <li>避開受訪單位午休時段（預設 12:00–13:00），下午場次一律 13 時以後開始</li>
+      <li>在適當時段插入午餐，依評分、價位、順路程度挑選餐廳</li>
+      <li>依當日星期別配對有行駛的高鐵車次，去程與回程各留緩衝時間</li>
+      <li>檢查是否超過目標結束時間，以及行程是否壓到午休</li>
+    </ul>
+
+    <h3>系統不會處理的事</h3>
+    <ul>
+      <li>不會訂高鐵票、不會訂餐廳，僅提供建議</li>
+      <li>車程為推估值，實際走過後請自行回填修正</li>
+      <li>疏運期間（連續假期）的加班車不在班表內，需另行查詢</li>
+      <li>受訪單位的聯絡與確認仍須人工進行</li>
+    </ul>
+
+    <h2 id="a2">貳、系統架構</h2>
+    <table>
+      <tr><th>組成</th><th>所在位置</th><th>說明</th></tr>
+      <tr><td>前端網頁</td><td>GitHub Pages</td><td>單一 HTML 檔，所有排程運算都在使用者的瀏覽器內完成，不需伺服器</td></tr>
+      <tr><td>後端程式</td><td>Google Apps Script</td><td>負責地址定位、餐廳搜尋、班表讀取、案件存取與使用紀錄</td></tr>
+      <tr><td>資料庫</td><td>Google 試算表</td><td>存放高鐵班表、地點與餐廳快取、案件內容、使用紀錄</td></tr>
+      <tr><td>外部服務</td><td>Google Maps Platform</td><td>Geocoding API 提供地址座標，Places API (New) 提供餐廳資料</td></tr>
+    </table>
+
+    <h3>存取控制</h3>
+    <p>前端網頁與程式碼儲存庫皆為公開，程式碼中不含任何金鑰。API 金鑰存放於 Apps Script 的指令碼屬性，通行碼由使用者自行輸入並僅存於個人瀏覽器。</p>
+    <div class="stop">
+      <p><b>通行碼是唯一的一道防線。</b>Apps Script 必須部署為「任何人可存取」，靜態網頁才呼叫得到，因此網址等同公開。通行碼應使用 16 字元以上的隨機字串，不得寫入任何檔案或公開場合。</p>
+    </div>
+
+    <h2 id="a3">參、角色與權責</h2>
+    <table>
+      <tr><th>角色</th><th>權責</th></tr>
+      <tr><td>管理者</td><td>維護儲存庫與前端程式、部署 Apps Script、保管 API 金鑰與通行碼、更新高鐵班表、定期檢視使用紀錄與費用</td></tr>
+      <tr><td>一般使用者</td><td>輸入通行碼、規劃行程、微調結果、產出公文、回填實際車程以提升推估準確度</td></tr>
+    </table>
+
+    <h2 id="a4">肆、使用者操作程序</h2>
+
+    <h3>一、首次使用設定</h3>
+    <ol>
+      <li>開啟工具網址（由管理者提供）。</li>
+      <li>展開頁面中的「設定」區塊。</li>
+      <li>於「公文設定」填入自己的姓名，這會記入使用紀錄。</li>
+      <li>於「Google 服務」填入管理者提供的通行碼，按「測試連線」。</li>
+      <li>確認顯示三行皆為正常：試算表可讀寫、地址定位正常、午餐搜尋正常。</li>
+    </ol>
+    <p>設定保存在這台電腦的瀏覽器中，同一台電腦不需重複輸入。更換電腦或清除瀏覽器資料後需重新設定。</p>
+    <div class="note">
+      <p>不填通行碼也能使用，只是地址改用縣市層級粗略定位、午餐為「待訂」占位、臺北－左營以外的區間不提供車次建議。排程、微調、產出公文等功能不受影響。</p>
+    </div>
+
+    <h3>二、規劃行程</h3>
+    <ol>
+      <li>於「訪視日期」填入西元日期，星期與民國年會自動換算。每天可各自設定集合時間與集合地點。</li>
+      <li>於「行程地點」逐列填入名稱與地址，地址須含縣市。<b>整批名單可自 Excel 複製後貼進任一格，系統會自動展開成多列。</b></li>
+      <li>確認「設定」中的排程規則（每廠停留時間、午休時段、目標與最晚結束時間）符合本次需求。</li>
+      <li>按「規劃行程」。系統會顯示每天的訪視家數與結束時間，並列出需注意事項。</li>
+    </ol>
+    <div class="warn">
+      <p><b>集合地點要寫得出縣市。</b>只填「飯店」這類名稱無法定位，該日的來回車程會退回預設值。請寫成「◯◯飯店（高雄市苓雅區◯◯路◯號）」。</p>
+    </div>
+
+    <h3>三、檢視與微調</h3>
+    <ul>
+      <li>拖曳卡片可改變順序，亦可跨天拖曳；行動裝置請改用卡片上的上下箭頭與日期下拉選單</li>
+      <li>名稱、地址、停留分鐘、每段車程分鐘數皆可直接修改，時間欄會即時重算</li>
+      <li>修改過的車程會標示「手動」，可按「改回自動」還原</li>
+      <li>壓到午休的卡片會顯示為紅色，上方時間帶亦會同步標紅</li>
+      <li>某一天被排空時仍會顯示卡片，可將其他天的卡片拖入虛線區域</li>
+      <li>每天下方提供「在 Google 地圖開啟這天的路線」，可交由駕駛導航</li>
+    </ul>
+    <div class="warn">
+      <p><b>請特別確認標示「推估」的車程。</b>推估值誤差約在十分鐘上下。實際走過後回填正確分鐘數，該路段之後就會沿用實際值，名單愈用愈準。</p>
+    </div>
+
+    <h3>四、產出與存檔</h3>
+    <table>
+      <tr><th>功能</th><th>說明</th></tr>
+      <tr><td>產生 Word 檔</td><td>下載 .docx，中文標楷體、英文 Times New Roman，表格外框 1.5pt、內框 0.5pt</td></tr>
+      <tr><td>複製行程表</td><td>複製後可直接貼入 Word，保留表格結構</td></tr>
+      <tr><td>列印 / 存成 PDF</td><td>以 A4 公文格式排版，每日一頁</td></tr>
+      <tr><td>儲存案件</td><td>存入資料庫並產生案件連結，可分享給同事開啟同一份行程繼續編輯</td></tr>
+    </table>
+    <p>產生 Word 或列印時，系統會自動儲存一次案件。同一案件重複儲存為更新，不會產生重複紀錄。開啟他人分享的案件連結時，自己這邊也需先填入通行碼。</p>
+
+    <h2 id="a5">伍、管理者維護作業</h2>
+
+    <h3>一、新增使用者</h3>
+    <p>將工具網址與通行碼提供給對方即可，無須建立帳號。通行碼外流時，至 Apps Script 的「專案設定 → 指令碼屬性」修改 <code>ACCESS_KEY</code>，即時生效，並重新通知全體使用者。</p>
+
+    <h3>二、更新高鐵班表</h3>
+    <ol>
+      <li>自台灣高鐵官網下載最新之常態時刻表。</li>
+      <li>將時刻資料整理為「班表」分頁格式後匯入。</li>
+      <li>匯入時務必<b>取消勾選</b>「將文字轉換為數字、日期和公式」，否則 <code>06:15</code> 會被轉為時間值。</li>
+      <li>於「更新日期」欄填入核對日期，前端會顯示此日期供使用者判斷資料新舊。</li>
+    </ol>
+    <table>
+      <tr><th>欄位</th><th>說明</th></tr>
+      <tr><td>方向</td><td>南下或北上</td></tr>
+      <tr><td>車次</td><td>例如 0205</td></tr>
+      <tr><td>行駛日</td><td>空白代表每日行駛；有限制才填，<code>0</code> 為週日、<code>1</code> 至 <code>6</code> 為週一至週六</td></tr>
+      <tr><td>十二個站別欄位</td><td>空白代表該站不停；<code>08:26-08:28</code> 為到站與開車；單一時間代表起站或終點站</td></tr>
+      <tr><td>更新日期</td><td>核對日期，會顯示於前端</td></tr>
+    </table>
+    <p>若已申請 TDX 運輸資料流通服務金鑰，可於指令碼屬性填入 <code>TDX_CLIENT_ID</code> 與 <code>TDX_CLIENT_SECRET</code>，執行 <code>refreshTimetable()</code> 自動更新，亦可設定每月觸發程序自動執行。</p>
+
+    <h3>三、修改程式</h3>
+    <div class="stop">
+      <p><b>修改 <code>Code.gs</code> 後必須重新部署，僅存檔不會生效。</b></p>
+      <p>請走「部署 → 管理部署作業 → 鉛筆圖示 → 版本：新版本 → 部署」，網址會沿用。若誤走「新增部署作業」會產生新網址，須回頭修改前端的 <code>DEFAULT_GAS_URL</code>。</p>
+    </div>
+    <p>僅修改指令碼屬性（<code>MAPS_KEY</code>、<code>ACCESS_KEY</code> 等）為即時生效，不需重新部署。修改前端 <code>index.html</code> 後上傳至儲存庫覆蓋即可，約一至兩分鐘後生效。</p>
+
+    <h3>四、金鑰與費用管理</h3>
+    <ul>
+      <li><b>API 限制：</b>於憑證頁面將金鑰限制為 Geocoding API 與 Places API (New) 兩項</li>
+      <li><b>應用程式限制維持「無」：</b>呼叫來自 Apps Script 伺服器而非瀏覽器，設定網域限制反而會擋掉自己</li>
+      <li><b>配額上限：</b>於「API 和服務 → 配額與系統限制」將兩個 API 的每日請求上限各設為 200 次</li>
+      <li><b>預算通知：</b>於「帳單 → 預算與快訊」設定金額門檻通知</li>
+    </ul>
+    <p>成本概況：地址定位每千次 5 美元、餐廳搜尋每千次 40 美元，均有每月免費額度。以本會用量加上查詢結果快取，實際費用趨近於零。</p>
+
+    <h2 id="a6">陸、管考與統計</h2>
+    <p>資料庫的「使用紀錄」分頁記錄每一次操作，可據以統計使用率與產出。</p>
+    <table>
+      <tr><th>欄位</th><th>說明</th></tr>
+      <tr><td>時間</td><td>動作發生時間</td></tr>
+      <tr><td>使用者</td><td>使用者於設定中填入的姓名</td></tr>
+      <tr><td>動作</td><td>規劃行程、儲存案件、產生Word、列印、開啟案件</td></tr>
+      <tr><td>案件ID</td><td>對應「案件」分頁，可追查該次產出的完整內容</td></tr>
+      <tr><td>標題</td><td>文件標題，通常為計畫名稱</td></tr>
+      <tr><td>天數 / 訪視家數</td><td>該次行程的規模</td></tr>
+    </table>
+
+    <h3>可產出的管考指標</h3>
+    <ul>
+      <li><b>使用率：</b>依「使用者」與「時間」樞紐分析，可得各人各月的使用次數</li>
+      <li><b>產出量：</b>篩選動作為「產生Word」或「列印」的紀錄，即為實際產出的公文份數</li>
+      <li><b>規模統計：</b>加總「訪視家數」可得期間內規劃的訪視點總數</li>
+      <li><b>完整內容追溯：</b>以案件ID 至「案件」分頁查詢，Markdown 欄為可直接閱讀的完整行程</li>
+    </ul>
+    <div class="note">
+      <p>「使用者」為自行填寫的欄位，非經驗證的身分。用於內部管考足夠，但無法防止填寫不實。</p>
+    </div>
+    <p>「案件」分頁同時保存兩種格式：<b>Markdown</b> 供人閱讀與彙整報告，<b>JSON</b> 供系統還原為可編輯的行程。座標、停留時間、人工調整過的車程等資訊僅存於 JSON。</p>
+
+    <h2 id="a7">柒、疑難排除</h2>
+    <table>
+      <tr><th>狀況</th><th>處理方式</th></tr>
+      <tr><td>測試連線顯示「通行碼不正確」</td><td>確認通行碼與指令碼屬性 <code>ACCESS_KEY</code> 完全一致，含大小寫</td></tr>
+      <tr><td>測試連線三個欄位皆空白</td><td>後端為舊版，請管理者重新部署新版本</td></tr>
+      <tr><td>地址只定位到縣市層級</td><td>地址不完整或無法解析，請補齊縣市與完整門牌</td></tr>
+      <tr><td>午餐維持「待訂」</td><td>該區域無符合條件的餐廳，或未填通行碼。可放寬設定中的評分與價位條件，或自行填入</td></tr>
+      <tr><td>某區間不提供車次建議</td><td>「班表」分頁尚無該起訖站資料，請管理者確認班表涵蓋範圍</td></tr>
+      <tr><td>行程結束時間超過目標</td><td>減少當日訪視家數、縮短停留時間，或將部分單位拖曳至其他日期</td></tr>
+      <tr><td>某一天被排空</td><td>將其他日期的卡片拖入該日的虛線區域，或使用該日的新增按鈕</td></tr>
+      <tr><td>開啟案件連結顯示需要通行碼</td><td>案件內容存於資料庫，開啟者亦須先於設定填入通行碼</td></tr>
+    </table>
+
+    <h2 id="a8">附錄：預設設定值</h2>
+    <table>
+      <tr><th>項目</th><th>預設值</th><th>說明</th></tr>
+      <tr><td>每廠停留</td><td>60 分鐘</td><td>可於設定調整，亦可逐一於卡片修改</td></tr>
+      <tr><td>廠方午休</td><td>12:00 – 13:00</td><td>訪視不得進入此時段</td></tr>
+      <tr><td>可壓進午休</td><td>10 分鐘</td><td>容許上午最後一場延後至 12:10</td></tr>
+      <tr><td>午餐最短時間</td><td>60 分鐘</td><td>結束時間會延至 13:00</td></tr>
+      <tr><td>目標結束時間</td><td>16:00</td><td>超過會顯示提醒但仍可接受</td></tr>
+      <tr><td>最晚結束時間</td><td>17:00</td><td>超過即視為不可行，該日不會排入</td></tr>
+      <tr><td>去程抵站緩衝</td><td>15 分鐘</td><td>高鐵抵達至集合時間的最短間隔</td></tr>
+      <tr><td>回程候車緩衝</td><td>20 分鐘</td><td>行程結束至發車時間的最短間隔</td></tr>
+      <tr><td>餐廳最低評分</td><td>4.0</td><td>搜尋不到時會自動放寬至 3.5</td></tr>
+      <tr><td>餐廳價位上限</td><td>便宜（約 200 以內）</td><td>放寬階梯的最後一步會取消此限制</td></tr>
+      <tr><td>餐廳搜尋半徑</td><td>12 公里</td><td>放寬時會擴大為 1.5 倍</td></tr>
+    </table>
+
+  </main>
+
+  <div class="foot">
+    本頁可直接列印或存成 PDF（瀏覽器列印功能會自動套用 A4 公文版面）。內容如與實際操作不符，請通知管理者更新。
+  </div>
+</div>
+</body>
+</html>

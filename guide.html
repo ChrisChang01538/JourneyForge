@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>行程規劃工具　新手指南</title>
+<style>
+:root{
+  --ink:#15202a; --ink-2:#48606f; --ink-3:#7d94a1;
+  --paper:#e9eef1; --surface:#fff; --rule:#c7d4db; --rule-soft:#dfe7eb;
+  --teal:#0f6b68; --teal-soft:#e0efee;
+  --sand:#e8dcbd; --sand-ink:#7a6323;
+  --alert:#ab3226; --alert-soft:#fbe9e6;
+  --warn:#9a6b1c; --warn-soft:#fbf1de;
+  --font-ui:"Noto Sans TC","PingFang TC","Heiti TC","Microsoft JhengHei",-apple-system,"Segoe UI",sans-serif;
+  --font-mono:ui-monospace,"SFMono-Regular","Roboto Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--font-ui);font-size:16px;line-height:1.85;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1040px;margin:0 auto;padding:22px 18px 90px;display:grid;grid-template-columns:210px 1fr;gap:28px}
+@media (max-width:820px){.wrap{grid-template-columns:1fr;gap:12px}}
+
+.masthead{grid-column:1/-1;border-top:3px solid var(--ink);padding-top:13px;margin-bottom:6px;
+  display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between}
+.masthead h1{margin:0;font-size:23px}
+.masthead .sub{margin:3px 0 0;color:var(--ink-2);font-size:13px}
+.masthead .links a{color:var(--teal);font-weight:600;font-size:13px;text-decoration:none;border:1px solid var(--rule);
+  background:var(--surface);padding:7px 13px;border-radius:2px;margin-left:6px;display:inline-block}
+.masthead .links a:hover{background:var(--teal-soft);border-color:var(--teal)}
+
+nav.toc{align-self:start;position:sticky;top:18px;background:var(--surface);border:1px solid var(--rule);padding:13px 14px;font-size:13.5px;line-height:1.7}
+@media (max-width:820px){nav.toc{position:static}}
+nav.toc h2{margin:0 0 8px;font-size:10.5px;letter-spacing:.16em;color:var(--ink-3);text-transform:uppercase}
+nav.toc ol{margin:0;padding-left:1.15em}
+nav.toc li{margin:3px 0}
+nav.toc a{color:var(--ink-2);text-decoration:none}
+nav.toc a:hover{color:var(--teal)}
+
+main{background:var(--surface);border:1px solid var(--rule);padding:26px 32px 36px;min-width:0}
+@media (max-width:820px){main{padding:18px 16px 26px}}
+main h2{font-size:21px;margin:36px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--ink);scroll-margin-top:20px}
+main h2:first-child{margin-top:0}
+main h3{font-size:17px;margin:26px 0 6px;color:var(--teal)}
+main p{margin:10px 0}
+main ul,main ol{margin:10px 0;padding-left:1.5em}
+main li{margin:6px 0}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--paper);padding:1px 6px;border-radius:2px}
+kbd{font-family:var(--font-ui);font-size:.88em;border:1px solid var(--rule);border-bottom-width:2px;
+  background:#fafcfc;padding:1px 7px;border-radius:3px;white-space:nowrap}
+
+.lede{font-size:17px;color:var(--ink-2);border-left:3px solid var(--rule);padding-left:16px;margin:14px 0 22px}
+
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14.5px;line-height:1.65}
+th,td{border:1px solid var(--rule);padding:8px 11px;vertical-align:top;text-align:left}
+th{background:#edf2f4;font-weight:700;font-size:13px}
+
+.tip{border-left:3px solid var(--teal);background:var(--teal-soft);padding:12px 16px;margin:16px 0;font-size:15px}
+.warn{border-left:3px solid var(--warn);background:var(--warn-soft);padding:12px 16px;margin:16px 0;font-size:15px}
+.stop{border-left:3px solid var(--alert);background:var(--alert-soft);padding:12px 16px;margin:16px 0;font-size:15px}
+.tip p:first-child,.warn p:first-child,.stop p:first-child{margin-top:0}
+.tip p:last-child,.warn p:last-child,.stop p:last-child{margin-bottom:0}
+.tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.1em;padding:2px 8px;border-radius:2px;
+  background:var(--teal);color:#fff;vertical-align:2px;margin-right:6px}
+
+.demo{font-family:var(--font-mono);font-size:13.5px;line-height:1.7;background:#f7fafb;
+  border:1px solid var(--rule-soft);padding:14px 16px;margin:14px 0;overflow-x:auto;white-space:pre}
+
+.check{list-style:none;padding-left:0}
+.check li{padding-left:30px;position:relative;margin:9px 0}
+.check li::before{content:"☐";position:absolute;left:4px;font-size:18px;color:var(--ink-3);line-height:1.4}
+
+
+.fig{border:1px solid var(--rule-soft);background:#fbfcfd;padding:14px 14px 10px;margin:16px 0 6px;overflow-x:auto}
+.fig svg{display:block;width:100%;height:auto;min-width:520px}
+.figcap{font-size:12px;color:var(--ink-3);margin:0 0 14px;padding-left:2px}
+ol.callout{counter-reset:c;list-style:none;padding-left:0;margin:10px 0 18px}
+ol.callout li{counter-increment:c;position:relative;padding-left:34px;margin:7px 0;font-size:15px}
+ol.callout li::before{content:counter(c);position:absolute;left:0;top:2px;width:22px;height:22px;
+  border-radius:50%;background:var(--teal);color:#fff;font-size:12.5px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;line-height:1}
+.foot{grid-column:1/-1;font-size:12.5px;color:var(--ink-3);border-top:1px solid var(--rule);padding-top:12px;margin-top:6px}
+
+@media print{
+  @page{size:A4;margin:2cm}
+  body{background:#fff;font-size:11.5pt;line-height:1.65}
+  .wrap{display:block;max-width:none;padding:0}
+  nav.toc,.masthead .links{display:none}
+  main{border:0;padding:0}
+  main h2,main h3{page-break-after:avoid}
+  table,tr,.tip,.warn,.stop,.demo{page-break-inside:avoid}
+  a{color:#000;text-decoration:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div>
+      <h1>行程規劃工具　新手指南</h1>
+      <p class="sub">第一次排訪視行程？跟著做一次就會了。</p>
+    </div>
+    <div class="links">
+      <a href="index.html">開啟工具</a>
+      <a href="sop.html">系統說明</a>
+    </div>
+  </header>
+
+  <nav class="toc">
+    <h2>目次</h2>
+    <ol>
+      <li><a href="#g1">這個工具在幫你什麼</a></li>
+      <li><a href="#g2">開始前先準備四樣</a></li>
+      <li><a href="#g3">跟著做一次</a></li>
+      <li><a href="#g4">看懂畫面在說什麼</a></li>
+      <li><a href="#g5">常見的調整</a></li>
+      <li><a href="#gset">設定裡有什麼</a></li>
+      <li><a href="#g6">產出之後還要做的事</a></li>
+      <li><a href="#g7">新手最常踩的五個坑</a></li>
+      <li><a href="#g8">卡住的時候</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+    <h2 id="g1">一、這個工具在幫你什麼</h2>
+    <p class="lede">你手上有一份要去訪視的廠商名單和幾天可用的日期，要排出一份能發文的行程表。這件事手工做大概要兩三個小時，而且很容易排出「上午跑屏東、下午跑阿蓮」這種來回折返的行程。</p>
+
+    <p>工具會幫你決定四件事：</p>
+    <ul>
+      <li><b>哪幾家同一天去</b>——依地理位置分群，不會把相隔一小時車程的兩個區域排在同一天</li>
+      <li><b>當天的先後順序</b>——算出總車程最短的走法</li>
+      <li><b>午餐排在哪裡</b>——找一家順路、當天有營業、評價不差的店</li>
+      <li><b>搭哪一班高鐵</b>——去程算好抵達後還來得及集合，回程算好結束後來得及上車</li>
+    </ul>
+
+    <p>然後直接產出 Word 或 PDF，格式就是公文要的樣子。</p>
+
+    <div class="tip">
+      <p><b>有一個規則你可能不知道，但工具幫你守著：不要占用廠方的午休時間。</b></p>
+      <p>工廠通常 12 點到 1 點休息，這時候去訪視，接待你的人沒得吃飯，現場也找不到人。所以工具排的行程，上午最後一場一定在 12 點前結束，下午第一場 1 點以後才開始。這是實務上的基本禮貌，前輩不一定會特別跟你講，但排錯了對方會有意見。</p>
+    </div>
+
+    <h2 id="g2">二、開始前先準備四樣</h2>
+    <table>
+      <tr><th>要準備的</th><th>說明</th></tr>
+      <tr><td><b>廠商名稱和地址</b></td><td>地址一定要有縣市。從計畫的名冊或公文複製就好，通常是 Excel 或 Word 裡的一張表</td></tr>
+      <tr><td><b>可用的日期</b></td><td>幾月幾號，可以不連續。先跟主管確認哪幾天大家都有空</td></tr>
+      <tr><td><b>集合地點</b></td><td>通常是高鐵站。要寫得出縣市，例如「左營高鐵站大廳層4號出口（高雄市左營區高鐵路105號）」</td></tr>
+      <tr><td><b>通行碼</b></td><td>跟帶你的人或系統管理者要。只要填一次，這台電腦就會記住</td></tr>
+    </table>
+
+    <div class="warn">
+      <p><b>地址寫「◯◯工業區」或「◯◯飯店」是不夠的。</b>工具靠地址算距離，看不出位置就沒辦法排。地址一定要能定位到門牌，至少要有縣市和路名。</p>
+    </div>
+
+    <h2 id="g3">三、跟著做一次</h2>
+    <p>用一個真實的例子走完整流程：七家廠商、三天、從左營高鐵站出發。</p>
+
+    <h3><span class="tag">1</span>連線</h3>
+    <p>開啟工具，畫面中間有一塊「規劃行程」的按鈕，旁邊會出現<b>你的姓名</b>和<b>通行碼</b>兩個欄位。填好按「連線」。</p>
+    <p>看到「已連線」加上你的名字就成功了。之後這台電腦不會再問。</p><div class="fig"><svg viewBox="0 0 700 140" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="hz" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="7" height="7" fill="#e8dcbd"/><rect width="3" height="7" fill="#f3ecda"/></pattern><style>.bx{fill:#fff;stroke:#c7d4db}.lb{font:11px sans-serif;fill:#7d94a1}.tx{font:12.5px sans-serif;fill:#15202a}.ph{font:12.5px sans-serif;fill:#a8b8c0}.cn{font:12px sans-serif;font-weight:700;fill:#fff}.tl{font:11px sans-serif;fill:#0f6b68}</style></defs><rect x="1" y="1" width="698" height="138" fill="#fff" stroke="#c7d4db"/><rect x="18" y="22" width="104" height="40" fill="#0f6b68"/><text x="70" y="47" text-anchor="middle" font-size="14" fill="#fff">規劃行程</text><line x1="140" y1="18" x2="140" y2="66" stroke="#dfe7eb"/><text x="156" y="26" class="lb">首次使用請先連線</text><rect x="156" y="34" width="118" height="30" class="bx"/><text x="166" y="54" class="ph">你的姓名</text><rect x="284" y="34" width="118" height="30" class="bx"/><text x="294" y="54" class="ph">通行碼</text><rect x="412" y="34" width="62" height="30" class="bx"/><text x="443" y="54" text-anchor="middle" class="tx">連線</text><text x="18" y="116" class="tx" fill="#48606f">按下去會依地點分天、決定順序、插午餐、配車次。</text><circle cx="215" cy="82" r="11" fill="#0f6b68"/><text x="215" y="86" text-anchor="middle" class="cn">1</text><circle cx="343" cy="82" r="11" fill="#0f6b68"/><text x="343" y="86" text-anchor="middle" class="cn">2</text><circle cx="443" cy="82" r="11" fill="#0f6b68"/><text x="443" y="86" text-anchor="middle" class="cn">3</text></svg></div><p class="figcap">示意圖：未連線時，「規劃行程」右邊會出現這一區；連好之後它會自動縮成一行「已連線　你的名字」。</p><ol class="callout">
+      <li><b>你的姓名</b>——填本名。這會記進使用紀錄，主管統計使用狀況時會看到。</li>
+      <li><b>通行碼</b>——跟帶你的人要。輸入時會遮起來，打完可以直接按 <kbd>Enter</kbd>。</li>
+      <li><b>連線</b>——按下去會實際測試三項服務，成功會顯示座標和找到幾家餐廳。</li>
+    </ol>
+    <p class="lede">姓名會記進使用紀錄，主管統計工具使用狀況時會看到。填自己的本名就好。</p>
+
+    <h3><span class="tag">2</span>填訪視日期</h3>
+    <p>最上面那張表填日期。<b>填西元</b>，民國年和星期會自動幫你換算——你會看到右邊出現「115年9月21日（星期一）」。</p>
+<div class="fig"><svg viewBox="0 0 700 150" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="hz" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="7" height="7" fill="#e8dcbd"/><rect width="3" height="7" fill="#f3ecda"/></pattern><style>.bx{fill:#fff;stroke:#c7d4db}.lb{font:11px sans-serif;fill:#7d94a1}.tx{font:12.5px sans-serif;fill:#15202a}.ph{font:12.5px sans-serif;fill:#a8b8c0}.cn{font:12px sans-serif;font-weight:700;fill:#fff}.tl{font:11px sans-serif;fill:#0f6b68}</style></defs><rect x="1" y="1" width="698" height="148" fill="#fff" stroke="#c7d4db"/><text x="18" y="26" font-size="14" font-weight="700" fill="#15202a">訪視日期</text><rect x="596" y="12" width="86" height="26" class="bx"/><text x="639" y="29" text-anchor="middle" class="tx">＋ 加一天</text><line x1="18" y1="52" x2="682" y2="52" stroke="#c7d4db"/><text x="22" y="48" class="lb">日期</text><text x="180" y="48" class="lb">集合時間</text><text x="300" y="48" class="lb">集合地點</text><text x="560" y="48" class="lb">民國格式</text><rect x="18" y="60" width="150" height="28" class="bx"/><text x="28" y="79" class="tx">2026-09-21</text><rect x="178" y="60" width="104" height="28" class="bx"/><text x="188" y="79" class="tx">09:45</text><rect x="292" y="60" width="248" height="28" class="bx"/><text x="300" y="79" class="tx">左營高鐵站大廳層4號出口（高雄…</text><text x="556" y="79" class="tx" fill="#48606f">115年9月21日（星期一）</text><rect x="18" y="96" width="150" height="28" class="bx"/><text x="28" y="115" class="tx">2026-09-22</text><rect x="178" y="96" width="104" height="28" class="bx"/><text x="188" y="115" class="tx">09:45</text><rect x="292" y="96" width="248" height="28" class="bx"/><text x="556" y="115" class="tx" fill="#48606f">115年9月22日（星期二）</text><circle cx="93" cy="140" r="11" fill="#0f6b68"/><text x="93" y="144" text-anchor="middle" class="cn">1</text><circle cx="230" cy="140" r="11" fill="#0f6b68"/><text x="230" y="144" text-anchor="middle" class="cn">2</text><circle cx="416" cy="140" r="11" fill="#0f6b68"/><text x="416" y="144" text-anchor="middle" class="cn">3</text><circle cx="620" cy="140" r="11" fill="#0f6b68"/><text x="620" y="144" text-anchor="middle" class="cn">4</text></svg></div><p class="figcap">示意圖：訪視日期表。日期可以不連續，例如 9/21、9/22、9/24。</p><ol class="callout">
+      <li><b>日期</b>——填西元。點一下會跳出日曆，也可以直接打字。</li>
+      <li><b>集合時間</b>——預設早上 9 點 45 分。這個時間會決定去程要搭哪一班高鐵。</li>
+      <li><b>集合地點</b>——預設左營高鐵站。改成別的地方時<b>一定要寫出縣市</b>，只寫「飯店」工具算不出車程。</li>
+      <li><b>民國格式</b>——自動換算給你看，不用自己填。公文上就是印這個。</li>
+    </ol>
+    <p>要幾天就按幾次「＋ 加一天」。新增的那天會沿用前一天的集合時間和地點。</p>
+
+    <h3><span class="tag">3</span>貼上廠商名單</h3>
+    <p>第二張表是「行程地點」，一列一家，左邊名稱、右邊地址。</p>
+    <p class="lede"><b>不用一格一格打。</b>從 Excel 把整批名單複製起來，貼進任何一格，工具會自動拆成好幾列。名稱和地址用逗號或 Tab 分開都可以。</p>
+    <div class="demo">綠建股份有限公司, 高雄市阿蓮區中正路216巷56-1號
+久發環保工程股份有限公司, 高雄市大寮區興業路21號
+博威特實業股份有限公司仁林廠, 高雄市仁武區仁林路234號
+宏青企業股份有限公司, 屏東縣屏東市工業路1號
+弘光環保有限公司, 屏東縣長治鄉華錦街116巷11弄16號
+漢林環保科技股份有限公司, 高雄市大寮區過溪里大業街3號
+聯榮環保科技股份有限公司, 高雄市大社區保舍甲路109號</div>
+<div class="fig"><svg viewBox="0 0 700 178" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="hz" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="7" height="7" fill="#e8dcbd"/><rect width="3" height="7" fill="#f3ecda"/></pattern><style>.bx{fill:#fff;stroke:#c7d4db}.lb{font:11px sans-serif;fill:#7d94a1}.tx{font:12.5px sans-serif;fill:#15202a}.ph{font:12.5px sans-serif;fill:#a8b8c0}.cn{font:12px sans-serif;font-weight:700;fill:#fff}.tl{font:11px sans-serif;fill:#0f6b68}</style></defs><rect x="1" y="1" width="698" height="176" fill="#fff" stroke="#c7d4db"/><text x="18" y="26" font-size="14" font-weight="700" fill="#15202a">行程地點</text><rect x="580" y="12" width="102" height="26" class="bx"/><text x="631" y="29" text-anchor="middle" class="tx">＋ 新增一列</text><line x1="18" y1="52" x2="682" y2="52" stroke="#c7d4db"/><text x="22" y="48" class="lb">名稱</text><text x="330" y="48" class="lb">地址</text><rect x="18" y="60" width="300" height="28" class="bx"/><text x="26" y="79" class="tx">綠建股份有限公司</text><rect x="326" y="60" width="330" height="28" class="bx"/><text x="334" y="79" class="tx">高雄市阿蓮區中正路216巷56-1號</text><rect x="664" y="60" width="20" height="28" class="bx"/><text x="674" y="79" text-anchor="middle" class="tx">×</text><rect x="18" y="94" width="300" height="28" class="bx"/><text x="26" y="113" class="ph">單位或地點名稱</text><rect x="326" y="94" width="330" height="28" class="bx"/><text x="334" y="113" class="ph">含縣市的完整地址</text><rect x="664" y="94" width="20" height="28" class="bx"/><text x="674" y="113" text-anchor="middle" class="tx">×</text><text x="18" y="146" class="tx" fill="#48606f">共 7 個地點，其中 </text><text x="128" y="146" font-size="12.5" font-weight="700" fill="#ab3226">1 個地址看不出位置</text><text x="248" y="146" class="tx" fill="#48606f">，請補上縣市。</text><circle cx="168" cy="158" r="11" fill="#0f6b68"/><text x="168" y="162" text-anchor="middle" class="cn">1</text><circle cx="490" cy="158" r="11" fill="#0f6b68"/><text x="490" y="162" text-anchor="middle" class="cn">2</text><circle cx="640" cy="146" r="11" fill="#0f6b68"/><text x="640" y="150" text-anchor="middle" class="cn">3</text></svg></div><p class="figcap">示意圖：行程地點表。整批貼上後會自動展開成多列，多出來的空列不用理它。</p><ol class="callout">
+      <li><b>名稱</b>——會直接印在公文上，用正式全名，例如「◯◯股份有限公司◯◯廠」。</li>
+      <li><b>地址</b>——要含縣市。從名冊或公文複製最保險，自己憑印象打容易漏字。</li>
+      <li><b>這一行要看</b>——出現紅字就是有地址定位不到，那幾筆會被排除在行程外。</li>
+    </ol>
+
+    <h3><span class="tag">4</span>按「規劃行程」</h3>
+    <p>幾秒鐘後結果就出來了。你會看到類似這樣的摘要：</p>
+    <div class="demo">115年9月21日（星期一）：訪視 3 廠，15:45 結束
+115年9月22日（星期二）：訪視 2 廠，14:55 結束
+115年9月24日（星期四）：訪視 2 廠，15:05 結束</div>
+    <p>下面是每一天的完整行程卡片，包含幾點集合、車程幾分鐘、幾點到哪一家、午餐在哪裡、幾點回到高鐵站，還有建議搭哪一班車。</p><div class="fig"><svg viewBox="0 0 700 220" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="hz" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="7" height="7" fill="#e8dcbd"/><rect width="3" height="7" fill="#f3ecda"/></pattern><style>.bx{fill:#fff;stroke:#c7d4db}.lb{font:11px sans-serif;fill:#7d94a1}.tx{font:12.5px sans-serif;fill:#15202a}.ph{font:12.5px sans-serif;fill:#a8b8c0}.cn{font:12px sans-serif;font-weight:700;fill:#fff}.tl{font:11px sans-serif;fill:#0f6b68}</style></defs><rect x="1" y="1" width="698" height="218" fill="#fff" stroke="#c7d4db"/><text x="18" y="26" font-size="14" font-weight="700" fill="#15202a">規劃結果</text><text x="18" y="52" class="tx" fill="#48606f">— 115年9月21日（星期一）：訪視 3 廠，15:45 結束</text><text x="18" y="72" class="tx" fill="#48606f">— 115年9月22日（星期二）：訪視 2 廠，14:55 結束</text><text x="18" y="92" class="tx" fill="#48606f">— 115年9月24日（星期四）：訪視 2 廠，15:05 結束</text><line x1="18" y1="110" x2="682" y2="110" stroke="#c7d4db" stroke-dasharray="4 3"/><text x="18" y="130" font-size="10.5" font-weight="700" letter-spacing="1.6" fill="#9a6b1c">發文前要填的兩欄</text><rect x="140" y="119" width="62" height="16" fill="#fbf1de" stroke="#9a6b1c"/><text x="171" y="131" text-anchor="middle" font-size="10.5" fill="#9a6b1c">尚未填寫</text><text x="18" y="152" class="lb">文件標題（Word 的大標，也是檔名）</text><rect x="18" y="158" width="320" height="30" class="bx"/><text x="26" y="178" class="ph">例：環境部資源循環署訪視行程（乙計畫）</text><text x="356" y="152" class="lb">出席人員（一行一項）</text><rect x="356" y="158" width="326" height="30" class="bx"/><text x="364" y="178" class="tx">(一)OOOOO</text><circle cx="178" cy="200" r="11" fill="#0f6b68"/><text x="178" y="204" text-anchor="middle" class="cn">1</text><circle cx="519" cy="200" r="11" fill="#0f6b68"/><text x="519" y="204" text-anchor="middle" class="cn">2</text></svg></div><p class="figcap">示意圖：規劃結果。摘要下方那兩欄每個案子都要改，沒填會標「尚未填寫」。</p><ol class="callout">
+      <li><b>文件標題</b>——填實際的計畫名稱，例如「環境部資源循環署訪視行程（乙計畫）」。這會變成 Word 的大標，也是下載的檔名。</li>
+      <li><b>出席人員</b>——預設是 <code>(一)OOOOO</code>，一定要改成實際名單和職稱，一行一個項目。</li>
+    </ol>
+    <div class="warn">
+      <p>這兩欄以前藏在「設定」裡，很多人不會去點，結果公文發出去標題還是「訪視行程」、出席人員還是 <code>OOOOO</code>。現在直接放在結果上方，沒填會亮黃色提醒，按「產生 Word 檔」時也會再提示一次。</p>
+    </div>
+
+    <h3><span class="tag">5</span>檢查與微調</h3>
+    <p>先看每天下方那行「行程結束」的時間，還有旁邊的標籤是綠色還是紅色。綠色代表沒問題。</p>
+    <p>想調整的話，<b>直接拖曳卡片就能換順序</b>，也可以拖到別天去。時間會立刻重算，不用自己算。手機或平板上拖曳不好操作，改用卡片上的 <kbd>▲</kbd> <kbd>▼</kbd> 和日期下拉選單。</p>
+
+    <h3><span class="tag">6</span>產出</h3>
+    <p>確認沒問題後：</p>
+    <ul>
+      <li><b>產生 Word 檔</b>——直接下載 .docx，格式已經是公文的樣子，標楷體、表格框線都設好了</li>
+      <li><b>列印 / 存成 PDF</b>——要 PDF 或紙本用這個</li>
+      <li><b>儲存案件</b>——存起來並產生一條網址，傳給同事就能開同一份繼續改</li>
+    </ul>
+    <p>Word 裡的「四、出席人員」預設是 <code>(一)OOOOO</code>，記得改成實際名單。這在「設定 → 公文設定」裡改，一行一個人。</p>
+
+    <h2 id="g4">四、看懂畫面在說什麼</h2>
+
+    <h3>每天上方那條彩色帶</h3>
+    <p>那是一整天的時間比例圖，從早上 8 點半到晚上 6 點半。</p>
+    <table>
+      <tr><th>看到什麼</th><th>意思</th></tr>
+      <tr><td>深綠色方塊</td><td>訪視某一家廠商</td></tr>
+      <tr><td>米色方塊</td><td>午餐</td></tr>
+      <tr><td>斜線的區塊</td><td>廠方午休（12:00–13:00），這裡不該有訪視</td></tr>
+      <tr><td>細細的灰線</td><td>車程</td></tr>
+      <tr><td><b>紅色方塊</b></td><td><b>有訪視壓到午休了，要調整</b></td></tr>
+    </table>
+
+<div class="fig"><svg viewBox="0 0 700 300" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="hz2" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="7" height="7" fill="#e8dcbd"/><rect width="3" height="7" fill="#f3ecda"/></pattern><style>.b2{fill:#fff;stroke:#c7d4db}.l2{font:11px sans-serif;fill:#7d94a1}.t2{font:12.5px sans-serif;fill:#15202a}.c2{font:12px sans-serif;font-weight:700;fill:#fff}.k2{font:11px sans-serif;fill:#0f6b68}</style></defs><rect x="42" y="1" width="657" height="298" fill="#fff" stroke="#c7d4db"/><rect x="58" y="16" width="626" height="46" fill="#f8fafb" stroke="#dfe7eb"/><rect x="298" y="16" width="74" height="46" fill="url(#hz2)" stroke="#cdbd93"/><text x="302" y="27" font-size="9" font-weight="700" fill="#7a6323">午休</text><rect x="126" y="28" width="86" height="20" fill="#0f6b68"/><text x="131" y="42" font-size="9.5" fill="#fff">綠建</text><rect x="226" y="28" width="66" height="20" fill="#0f6b68"/><text x="231" y="42" font-size="9.5" fill="#fff">聯榮</text><rect x="308" y="28" width="58" height="20" fill="#e8dcbd" stroke="#cdbd93"/><text x="313" y="42" font-size="9.5" fill="#7a6323">午餐</text><rect x="410" y="28" width="86" height="20" fill="#ab3226"/><text x="415" y="42" font-size="9.5" fill="#fff">博威特</text><rect x="90" y="45" width="34" height="5" fill="#9fb3bd"/><rect x="214" y="45" width="10" height="5" fill="#9fb3bd"/><rect x="368" y="45" width="40" height="5" fill="#9fb3bd"/><text x="66" y="94" class="t2" fill="#7d94a1" font-family="monospace">11:00–11:30</text><text x="152" y="94" class="t2" fill="#48606f">車程，至聯榮環保科技股份有限公司</text><rect x="372" y="80" width="52" height="26" class="b2"/><text x="412" y="98" text-anchor="middle" class="t2">30</text><text x="430" y="94" class="l2">分鐘</text><rect x="464" y="82" width="40" height="20" fill="#fff" stroke="#c7d4db" rx="2"/><text x="484" y="96" text-anchor="middle" font-size="10" fill="#7d94a1">推估</text><rect x="58" y="120" width="626" height="76" fill="#fdfefe" stroke="#dfe7eb"/><text x="72" y="162" font-size="14" fill="#7d94a1">⣿</text><text x="92" y="146" class="t2" font-family="monospace" font-weight="700">11:30</text><text x="92" y="162" class="t2" font-family="monospace" font-weight="700">12:30</text><rect x="150" y="130" width="372" height="26" class="b2"/><text x="158" y="148" class="t2" font-weight="700">聯榮環保科技股份有限公司</text><rect x="150" y="160" width="372" height="26" class="b2"/><text x="158" y="178" class="t2" fill="#48606f">高雄市大社區保舍甲路109號</text><rect x="538" y="130" width="48" height="26" class="b2"/><text x="574" y="148" text-anchor="middle" class="t2">60</text><text x="592" y="148" class="l2">分鐘</text><rect x="538" y="160" width="24" height="24" class="b2"/><text x="550" y="177" text-anchor="middle" font-size="10">▲</text><rect x="566" y="160" width="24" height="24" class="b2"/><text x="578" y="177" text-anchor="middle" font-size="10">▼</text><rect x="594" y="160" width="66" height="24" class="b2"/><text x="627" y="177" text-anchor="middle" font-size="10.5">9月21日</text><rect x="664" y="160" width="20" height="24" class="b2"/><text x="674" y="177" text-anchor="middle" font-size="10">×</text><text x="58" y="228" class="t2">行程結束 </text><text x="126" y="230" font-family="monospace" font-size="17" font-weight="700" fill="#15202a">15:45</text><rect x="186" y="216" width="96" height="18" rx="9" fill="#e0efee" stroke="#0f6b68"/><text x="234" y="229" text-anchor="middle" font-size="10.5" fill="#0f6b68">16:00 前結束</text><rect x="292" y="216" width="72" height="18" rx="9" fill="#fbe9e6" stroke="#ab3226"/><text x="328" y="229" text-anchor="middle" font-size="10.5" fill="#ab3226">有衝突</text><line x1="58" y1="248" x2="684" y2="248" stroke="#c7d4db" stroke-dasharray="4 3"/><text x="58" y="268" class="l2">去程</text><text x="92" y="268" class="t2" font-family="monospace" font-weight="700" fill="#0f6b68">0205</text><text x="136" y="268" class="t2" font-family="monospace">臺北 07:51 → 左營 09:30</text><text x="330" y="268" class="l2">回程</text><text x="364" y="268" class="t2" font-family="monospace" font-weight="700" fill="#0f6b68">0242</text><text x="408" y="268" class="t2" font-family="monospace">左營 16:15 → 臺北 17:57</text><text x="58" y="290" class="k2">在 Google 地圖開啟這天的路線</text><circle cx="20" cy="39" r="11" fill="#0f6b68"/><text x="20" y="43" text-anchor="middle" class="c2">1</text><circle cx="20" cy="93" r="11" fill="#0f6b68"/><text x="20" y="97" text-anchor="middle" class="c2">2</text><circle cx="20" cy="158" r="11" fill="#0f6b68"/><text x="20" y="162" text-anchor="middle" class="c2">3</text><circle cx="20" cy="225" r="11" fill="#0f6b68"/><text x="20" y="229" text-anchor="middle" class="c2">4</text><circle cx="20" cy="275" r="11" fill="#0f6b68"/><text x="20" y="279" text-anchor="middle" class="c2">5</text></svg></div><p class="figcap">示意圖：一天的行程卡片。上方是整天的時間比例圖，中間是可以拖曳的行程，下方是結束時間與建議車次。</p><ol class="callout">
+      <li><b>整天的時間比例圖</b>——深綠是訪視、米色是午餐、細灰線是車程。斜線區塊是廠方午休（12:00–13:00），<b>紅色方塊代表有訪視壓到午休，要把那張卡片往前或往後移</b>。</li>
+      <li><b>車程列</b>——分鐘數可以直接改。標「推估」代表這段是用直線距離算的，可能差十分鐘上下；實際走過後把正確數字填進去，之後同一段路就會用你填的。</li>
+      <li><b>行程卡片</b>——左邊的握把按住可以拖曳換順序，也能拖到別天。名稱、地址、停留分鐘都能直接改。手機上改用 <kbd>▲</kbd> <kbd>▼</kbd> 和旁邊的日期選單，最右邊的 <kbd>×</kbd> 是刪除。</li>
+      <li><b>結束時間與狀態</b>——綠色代表沒問題，黃色是超過目標時間但還能接受，出現紅色的「有衝突」就要處理。</li>
+      <li><b>建議車次與路線</b>——去程回程各一班。最下面的連結會開啟當天完整的 Google 地圖路線，可以直接傳給駕駛。</li>
+    </ol>
+
+    <h3>卡片旁邊的小標籤</h3>
+    <table>
+      <tr><th>標籤</th><th>意思</th></tr>
+      <tr><td><b>推估</b></td><td>這段車程是用直線距離算的，可能差十分鐘上下</td></tr>
+      <tr><td><b>手動</b></td><td>這段車程你改過了，工具會用你填的數字</td></tr>
+      <tr><td>午餐（待訂）</td><td>還沒找到餐廳，或你還沒連線。可以自己填店名地址</td></tr>
+    </table>
+
+    <div class="warn">
+      <p><b>「推估」的車程請不要照單全收。</b>工具是用兩點之間的直線距離推算的，山路、市區壅塞、工業區的進出動線它都不知道。實際走過之後，回來把正確的分鐘數填進去——填過一次，之後排同一段路就會用你填的數字，愈用愈準。</p>
+    </div>
+
+    <h2 id="g5">五、常見的調整</h2>
+
+    <h3>某一天太趕，結束時間變紅色</h3>
+    <p>把那天最後一家拖到別天。如果每天都滿，就是天數不夠。</p>
+
+    <h3>出現「有 ◯ 家排不進去」</h3>
+    <p>工具會接著幫你試算，直接告訴你要怎麼改才塞得下，像這樣：</p>
+    <div class="demo">有 1 家排不進去：弘光環保有限公司
+以下任一種調整就能全部排入（實際試算過）：
+　・集合時間提早到 09:15（各天都提早）就排得進去
+　・最晚結束時間放寬到 18:00 就排得進去
+　・每廠停留縮短到 45 分鐘就排得進去</div>
+    <p>這些數字是<b>真的重新排過才給的</b>，不是概略估計。挑一種可以接受的，去「設定」改完再按一次「規劃行程」。</p>
+    <div class="tip">
+      <p>拿這個去跟主管討論很有用。與其說「排不完」，不如說「七家兩天排不完，要嘛加一天，要嘛每家只能待 45 分鐘」——選項清楚，決策就快。</p>
+    </div>
+
+    <h3>某一天被排空了</h3>
+    <p>空的那天還是會顯示卡片，中間有一塊虛線區域。把別天的卡片拖進去就好。</p>
+
+    <h3>午餐那家店不合適</h3>
+    <p>直接在卡片上改店名和地址。也可以到「設定 → 午餐條件」放寬評分或價位再重新規劃。</p>
+    <p class="lede">工具挑店的邏輯是「順路、當天有營業、符合評分和價位」，但它不知道那家店能不能容納你們這麼多人、要不要訂位。<b>選好之後請自己打電話訂位。</b></p>
+
+    <h3>集合地點不是高鐵站</h3>
+    <p>在「訪視日期」那張表直接改。記得寫出縣市，例如「◯◯飯店（高雄市苓雅區◯◯路◯號）」，只寫「飯店」工具會定位不到。</p>
+
+    <h2 id="gset">六、設定裡有什麼</h2>
+    <p class="lede">平常不用動。但遇到「這個行程排得不合我要的樣子」時，答案通常就在這裡。展開頁面上的「設定」就看得到。</p>
+
+    <h3>什麼時候會需要動它</h3>
+    <table>
+      <tr><th>你遇到的狀況</th><th>去改哪一項</th></tr>
+      <tr><td>某幾家需要待久一點</td><td>直接改那張卡片上的停留分鐘就好，不用進設定</td></tr>
+      <tr><td>這次每一家都要待 90 分鐘</td><td>排程規則 → <b>每廠停留</b></td></tr>
+      <tr><td>想早上八點就出發</td><td>訪視日期表直接改集合時間；要改所有天的預設值才進設定 → <b>預設集合時間</b></td></tr>
+      <tr><td>對方午休是 12:30 到 13:30</td><td>排程規則 → <b>廠方午休起／迄</b></td></tr>
+      <tr><td>希望更早結束</td><td>排程規則 → <b>目標結束</b>，改完重新規劃</td></tr>
+      <tr><td>天數不夠，願意排晚一點</td><td>排程規則 → <b>最晚結束</b>，這是硬上限，超過的行程不會被排出來</td></tr>
+      <tr><td>午餐都找不到店</td><td>午餐條件 → 把<b>最低評分</b>降到 3.5、<b>價位上限</b>放寬、或加大<b>搜尋半徑</b></td></tr>
+      <tr><td>要去台中不是高雄</td><td>高鐵班次 → 改<b>去程終點站</b></td></tr>
+      <tr><td>怕趕不上高鐵</td><td>高鐵班次 → 加大<b>回程候車緩衝</b></td></tr>
+    </table>
+
+    <h3>全部欄位</h3>
+    <table>
+      <tr><th>欄位</th><th>預設</th><th>它在控制什麼</th></tr>
+      <tr><td>使用者</td><td>—</td><td>你的名字，會記進使用紀錄</td></tr>
+      <tr><td>文件標題</td><td>訪視行程</td><td>Word 的大標與檔名。<b>每個案子都要改</b></td></tr>
+      <tr><td>出席人員</td><td>(一)OOOOO</td><td>公文「四、出席人員」的內容。<b>每個案子都要改</b></td></tr>
+      <tr><td>通行碼</td><td>—</td><td>連線用。填一次這台電腦就記住</td></tr>
+      <tr><td>去程起點站／終點站</td><td>臺北／左營</td><td>高鐵的起訖站，換縣市時要改</td></tr>
+      <tr><td>去程抵站緩衝</td><td>15 分鐘</td><td>高鐵抵達後到集合之間至少要留多久</td></tr>
+      <tr><td>回程候車緩衝</td><td>20 分鐘</td><td>行程結束到發車之間至少要留多久</td></tr>
+      <tr><td>最低評分</td><td>4.0</td><td>餐廳的 Google 評分門檻。找不到時系統會自動降到 3.5</td></tr>
+      <tr><td>價位上限</td><td>便宜（約 200 以內）</td><td>Google 的價位等級，不是實際金額，只能粗略對應</td></tr>
+      <tr><td>搜尋半徑</td><td>12 公里</td><td>從行程中點往外找多遠</td></tr>
+      <tr><td>用餐時間</td><td>60 分鐘</td><td>午餐最少要留多久，結束時間會延到 13:00</td></tr>
+      <tr><td>每廠停留</td><td>60 分鐘</td><td>每一家預設待多久</td></tr>
+      <tr><td>預設集合時間</td><td>09:45</td><td>新增日期時用的預設值</td></tr>
+      <tr><td>廠方午休起／迄</td><td>12:00 / 13:00</td><td>這段時間不排訪視</td></tr>
+      <tr><td>可壓進午休</td><td>10 分鐘</td><td>容許上午最後一場延到 12:10，多給一點彈性</td></tr>
+      <tr><td>目標結束</td><td>16:00</td><td>超過會提醒，但仍可接受</td></tr>
+      <tr><td>最晚結束</td><td>17:00</td><td>硬上限。排不進去時就是卡在這一條</td></tr>
+    </table>
+
+    <div class="tip">
+      <p><b>改完記得重新按「規劃行程」。</b>設定改了不會自動重排——如果你已經手動拖過卡片，重排會蓋掉你的調整，所以工具不會自作主張。</p>
+    </div>
+
+    <h2 id="g6">七、產出之後還要做的事</h2>
+    <p class="lede">行程表只是開始。以下這些工具不會做，但少做一項行程當天就會出狀況。</p>
+    <ul class="check">
+      <li><b>發文或致電各廠商確認</b>——確認當天有人可以接待、確認訪視內容與需要準備的資料</li>
+      <li><b>訂高鐵票</b>——工具只是建議車次，票要自己訂。連假期間會有疏運加班車，班表跟平常不一樣，要另外查</li>
+      <li><b>訂餐廳</b>——五個人以上幾乎都要訂位</li>
+      <li><b>安排交通工具</b>——租車或派車，工具算的是行車時間，不含找停車位的時間</li>
+      <li><b>把行程表發給所有出席人員</b>——包含署方長官、同行同事、駕駛</li>
+      <li><b>行程結束後回填實際車程</b>——這一步大家最常忘，但它是讓下一個人排得更準的唯一方法</li>
+    </ul>
+
+    <h2 id="g7">八、新手最常踩的五個坑</h2>
+
+    <h3>1. 地址寫不完整</h3>
+    <p>只寫「高雄廠」「◯◯工業區」，工具定位不到，整個排程就會歪掉。從公文或名冊複製完整地址。</p>
+
+    <h3>2. 忘記填通行碼就開始排</h3>
+    <p>不填也能排，但地址只會定位到縣市層級，午餐是「待訂」。畫面上會有一行提示告訴你。先連線再排，省得重來。</p>
+
+    <h3>3. 以為工具算的車程一定準</h3>
+    <p>標「推估」就是估的。特別是山區、離島型工業區、還有需要繞行的路段，誤差可能超過十五分鐘。心裡要留一點餘裕。</p>
+
+    <h3>4. 直接把預設的出席人員發出去</h3>
+    <p>Word 裡的 <code>(一)OOOOO</code> 是佔位符號。發文前一定要改成實際名單和職稱。</p>
+
+    <h3>5. 排在連假前後沒查疏運班表</h3>
+    <p>工具內建的是平常的班表。中秋、春節這些連假期間高鐵會加開班次、時刻也會調整，要另外去高鐵官網查。</p>
+
+    <h2 id="g8">九、卡住的時候</h2>
+    <table>
+      <tr><th>狀況</th><th>怎麼辦</th></tr>
+      <tr><td>連線失敗</td><td>先確認通行碼有沒有打錯，包含大小寫。還是不行就找管理者</td></tr>
+      <tr><td>某個地址一直定位不到</td><td>把地址貼進 Google 地圖看看查不查得到。查不到通常是地址本身有誤，回去核對名冊</td></tr>
+      <tr><td>午餐一直是「待訂」</td><td>那一帶可能沒有符合條件的店。放寬設定裡的評分或價位，或自己找一家填進去</td></tr>
+      <tr><td>某個區間沒有車次建議</td><td>班表資料庫裡還沒有那段起訖站，跟管理者說一聲</td></tr>
+      <tr><td>怎麼調都排不進去</td><td>就是天數真的不夠。帶著畫面上的結果去跟主管討論，那比空口說「排不完」有說服力</td></tr>
+    </table>
+
+    <div class="tip">
+      <p><b>排壞了不用怕。</b>按一次「規劃行程」就會重新算，不會弄壞任何東西。想試不同的排法就多按幾次、多拖幾下，這個工具沒有「存檔覆蓋」的風險——只有你按「儲存案件」才會存進資料庫。</p>
+    </div>
+
+  </main>
+
+  <div class="foot">
+    本頁可直接列印或存成 PDF。內容看不懂或跟實際操作不符，請告訴帶你的人或系統管理者，這份文件會持續更新。
+  </div>
+</div>
+</body>
+</html>
