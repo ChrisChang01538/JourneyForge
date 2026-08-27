@@ -233,11 +233,17 @@ details.cfg .body{padding:14px 15px;border-top:1px solid var(--rule-soft)}
       </div>
       <h3>Google 服務（選填，沒設定也能用）</h3>
       <div class="grid-f">
-        <div class="f wide"><label>Apps Script 網址</label><input type="text" id="cfg-url" placeholder="https://script.google.com/macros/s/……/exec"></div>
-        <div class="f"><label>通行碼</label><input type="text" id="cfg-key" placeholder="與 ACCESS_KEY 相同">
-          <span class="note" style="font-size:11.5px;color:var(--ink-3)">自己想一組，同時填在 Apps Script 的指令碼屬性 ACCESS_KEY</span></div>
+        <div class="f"><label>通行碼</label><input type="password" id="cfg-key" autocomplete="off" placeholder="阿榮發發發"></div>
         <div class="f" style="justify-content:flex-end"><button class="btn" id="btnTest">測試連線</button></div>
       </div>
+      <details class="sub">
+        <summary>進階：自訂 Apps Script 網址</summary>
+        <div class="grid-f" style="margin-top:8px">
+          <div class="f wide"><label>Apps Script 網址（留空＝用程式內建的）</label>
+            <input type="text" id="cfg-urlOverride" placeholder="留空即可"></div>
+        </div>
+        <p class="tiny" id="urlNow"></p>
+      </details>
       <h3>高鐵班次</h3>
       <div class="grid-f">
         <div class="f"><label>去程起點站</label><select id="cfg-originId"></select></div>
@@ -304,6 +310,12 @@ details.cfg .body{padding:14px 15px;border-top:1px solid var(--rule-soft)}
    未設定 Google 服務：純瀏覽器運作，地址用縣市／行政區粗略定位，午餐放占位
    設定之後：地址精確定位、午餐依條件即時搜尋
    ========================================================================== */
+/* ══════════════════════════════════════════════════════════════════════
+   管理者設定：把 Apps Script 部署後的 /exec 網址填在這裡，
+   同事開網頁就只需要輸入通行碼。重新部署換網址時改這一行即可。
+   ══════════════════════════════════════════════════════════════════════ */
+const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbxi0dsBsdvcepQo7WS-h7UvC2Sr8VEepL5BR9uv6PdofsKyA8Gt13Cpjy5_34W8Gip6/exec";
+
 const WK=["日","一","二","三","四","五","六"];
 const STATIONS=[["0990","南港"],["1000","臺北"],["1010","板橋"],["1020","桃園"],["1030","新竹"],
   ["1035","苗栗"],["1040","臺中"],["1043","彰化"],["1047","雲林"],["1050","嘉義"],["1060","臺南"],["1070","左營"]];
@@ -355,7 +367,7 @@ function trainsReady(){
 }
 
 function defCfg(){return{
-  url:"", key:"",
+  urlOverride:"", key:"",
   rating:4.0, price:1, radius:12, lunchMin:60,
   stay:60, meet:"09:45", lunchFrom:"12:00", lunchTo:"13:00", tolerance:10,
   endTarget:"16:00", endMax:"17:00", bufOut:15, bufBack:20,
@@ -364,6 +376,9 @@ function defCfg(){return{
   place:"左營高鐵站大廳層4號出口（高雄市左營區高鐵路105號）"
 };}
 let ORIGIN={name:"集合地點",addr:"",lat:null,lng:null};
+const gasUrl=()=>String(CFG.urlOverride||"").trim()||DEFAULT_GAS_URL;
+/* 網址寫死在程式裡，所以「後端能不能用」要看通行碼有沒有填 */
+const hasBackend=()=>!!(gasUrl() && String(CFG.key||"").trim());
 let CFG=defCfg(), PLACES={}, GEO={}, LEGS={}, DAYS=[], ITEMS=[], uid=0;
 
 const $=id=>document.getElementById(id);
@@ -424,7 +439,7 @@ function updateInfo(){
   const bad=f.filter(i=>i.lat==null).length, rough=f.filter(i=>i.level==="縣市").length;
   let msg="共 "+f.length+" 個地點";
   if(bad) msg+="，其中 <b style='color:var(--alert)'>"+bad+" 個地址看不出位置</b>，請補上縣市";
-  if(rough) msg+="，"+rough+" 個只定位到縣市層級，分天結果請自行核對"+(CFG.url?"":"（設定 Google 服務可精確定位）");
+  if(rough) msg+="，"+rough+" 個只定位到縣市層級，分天結果請自行核對"+(hasBackend()?"":"（在設定填通行碼可精確定位）");
   $("parseInfo").innerHTML=msg+"。";
 }
 /* 把一段多行文字拆成 [名稱,地址] */
@@ -647,8 +662,8 @@ function pickNorth(day,end){
 
 /* Apps Script 介接 */
 async function gas(action,payload){
-  if(!CFG.url) throw new Error("尚未設定 Apps Script 網址");
-  const res=await fetch(CFG.url,{
+  if(!gasUrl()) throw new Error("尚未設定 Apps Script 網址");
+  const res=await fetch(gasUrl(),{
     method:"POST",
     headers:{"Content-Type":"text/plain;charset=utf-8"},  /* 避開 CORS 預檢 */
     body:JSON.stringify(Object.assign({action,key:CFG.key},payload||{}))
@@ -679,7 +694,7 @@ async function run(){
   if(!rows.length){setStatus("請先在「行程地點」填至少一個地點");return;}
   busy=true; $("btnRun").disabled=true;
   try{
-    if(CFG.url){
+    if(hasBackend()){
       setStatus("定位地址中…",true);
       try{
         await geocodeAll(rows);
@@ -706,7 +721,7 @@ async function run(){
     DAYS.filter(d=>!d.date).forEach(d=>d.stops=[]);
     renderEditor();
 
-    if(CFG.url){
+    if(hasBackend()){
       setStatus("搜尋午餐地點…",true);
       for(const d of days){
         const lu=d.stops.find(s=>s.kind==="lunch"); if(!lu) continue;
@@ -736,7 +751,7 @@ async function run(){
     });
     if(out.left.length) rep.push({bad:true,text:"排不進去："+out.left.map(x=>P(x).name).join("、")+
       "。需要多一天、縮短停留，或放寬最晚結束時間。"});
-    if(!CFG.url) rep.push({bad:false,text:"未設定 Google 服務：午餐是占位，名稱與地址請自己填。"});
+    if(!hasBackend()) rep.push({bad:false,text:"未輸入通行碼：地址用縣市層級粗略定位、午餐是占位，請在設定裡填通行碼以啟用完整功能。"});
     showReport(rep);
     setStatus("排好了，下方可以拖曳微調。");
   }catch(e){ setStatus("規劃失敗："+e.message); }
@@ -1027,7 +1042,7 @@ function renderTrains(){
   });
 }
 async function loadTimetable(){
-  if(!CFG.url) { trainStatus(); return; }
+  if(!hasBackend()) { trainStatus(); return; }
   try{
     const t=await gas("timetable",{originId:CFG.originId,destId:CFG.destId});
     if(t&&t.out&&t.out.length){
@@ -1238,7 +1253,7 @@ $("btnWord").onclick=()=>{
 };
 
 /* 設定綁定 */
-const CFG_FIELDS=["docTitle","attendees","url","key","originId","destId","bufOut","bufBack","rating","price","radius","lunchMin","stay","meet","lunchFrom","lunchTo","tolerance","endTarget","endMax"];
+const CFG_FIELDS=["docTitle","attendees","urlOverride","key","originId","destId","bufOut","bufBack","rating","price","radius","lunchMin","stay","meet","lunchFrom","lunchTo","tolerance","endTarget","endMax"];
 function fillStations(){
   ["cfg-originId","cfg-destId"].forEach(id=>{
     const n=$(id); if(!n||n.options.length) return;
@@ -1255,6 +1270,12 @@ function trainStatus(msg){
     $("trainStatus").textContent="班表：內建靜態資料（僅臺北－左營，隨程式發布，可能過時）";
   else $("trainStatus").textContent="班表：沒有 "+od+" 的資料，這一段不會給車次建議";
 }
+function showUrl(){
+  const n=$("urlNow"); if(!n) return;
+  const u=gasUrl();
+  n.textContent = u ? ("目前連線："+u.slice(0,58)+(u.length>58?"…":"")
+    +(String(CFG.urlOverride||"").trim()?"（自訂）":"（程式內建）")) : "尚未設定任何網址";
+}
 function bindCfg(){
   fillStations();
   CFG_FIELDS.forEach(k=>{
@@ -1263,14 +1284,15 @@ function bindCfg(){
     n.onchange=e=>{
       const v=e.target.value;
       CFG[k]=(n.type==="number"||k==="price")?(parseFloat(v)||0):v;
-      renderDays(); renderTrains(); trainStatus(); renderEditor(); save();
-      if(k==="originId"||k==="destId"||k==="url"||k==="key") loadTimetable();
+      renderDays(); renderTrains(); trainStatus(); showUrl(); renderEditor(); save();
+      if(k==="originId"||k==="destId"||k==="urlOverride"||k==="key") loadTimetable();
     };
   });
 }
 $("btnTest").onclick=async()=>{
-  CFG.url=$("cfg-url").value.trim(); CFG.key=$("cfg-key").value.trim(); save();
-  if(!CFG.url){toast("請先貼上 Apps Script 網址");return;}
+  CFG.urlOverride=$("cfg-urlOverride").value.trim(); CFG.key=$("cfg-key").value.trim(); save();
+  if(!gasUrl()){toast("管理者尚未設定 Apps Script 網址");return;}
+  if(!CFG.key){toast("請先輸入通行碼");return;}
   setStatus("測試連線中…",true);
   try{const d=await gas("ping");setStatus("連線正常："+((d&&d.msg)||"OK"));toast("連線正常");}
   catch(e){setStatus("連線失敗："+e.message);toast("連線失敗");}
@@ -1292,8 +1314,8 @@ if(!load()){
 }
 if(!DAYS.length) DAYS=[{date:"",meet:"",place:"",stops:[]}];
 while(ITEMS.length<3) ITEMS.push(blankRow());
-bindCfg(); renderDays(); renderPlaces(); updateInfo(); renderTrains(); trainStatus(); renderEditor();
-if(CFG.url) loadTimetable();
+bindCfg(); showUrl(); renderDays(); renderPlaces(); updateInfo(); renderTrains(); trainStatus(); renderEditor();
+if(hasBackend()) loadTimetable();
 </script>
 </body>
 </html>
