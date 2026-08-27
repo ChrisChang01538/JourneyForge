@@ -182,6 +182,7 @@ details.cfg .body{border-top:1px solid var(--rule-soft)}
     </div>
     <div class="toolbar">
       <button class="btn" id="btnCopy">複製行程表</button>
+      <button class="btn" id="btnWord">產生 Word 檔</button>
       <button class="btn btn-primary" id="btnPrint">列印 / 存成 PDF</button>
     </div>
   </header>
@@ -210,7 +211,13 @@ details.cfg .body{border-top:1px solid var(--rule-soft)}
   <details class="cfg" id="cfgBox">
     <summary>設定（Google 服務、午餐條件、排程規則）</summary>
     <div class="body">
-      <h3 class="first">Google 服務（選填，沒設定也能用）</h3>
+      <h3 class="first">公文設定</h3>
+      <div class="grid-f">
+        <div class="f wide"><label>文件標題</label><input type="text" id="cfg-docTitle" placeholder="例：環境部資源循環署訪視行程（乙計畫）"></div>
+        <div class="f wide"><label>出席人員（一行一項，會照原樣排進「四、出席人員」）</label>
+          <textarea id="cfg-attendees" style="min-height:74px"></textarea></div>
+      </div>
+      <h3>Google 服務（選填，沒設定也能用）</h3>
       <div class="grid-f">
         <div class="f wide"><label>Apps Script 網址</label><input type="text" id="cfg-url" placeholder="https://script.google.com/macros/s/……/exec"></div>
         <div class="f"><label>通行碼</label><input type="text" id="cfg-key" placeholder="與 ACCESS_KEY 相同">
@@ -338,6 +345,7 @@ function defCfg(){return{
   rating:4.0, price:1, radius:12, lunchMin:60,
   stay:60, meet:"09:45", lunchFrom:"12:00", lunchTo:"13:00", tolerance:10,
   endTarget:"16:00", endMax:"17:00", bufOut:15, bufBack:20,
+  docTitle:"訪視行程", attendees:"(一)OOOOO\n(二)OOOOO",
   originId:"1000", destId:"1070", trainsInfo:{source:"builtin"},
   place:"左營高鐵站大廳層4號出口（高雄市左營區高鐵路105號）"
 };}
@@ -804,10 +812,11 @@ function ribbon(sc){
   });
   return el("div","ribbon",h);
 }
+const destName=id=>{const p=P(id);return p.pending?"餐廳":p.name;};
 const shortName=n=>String(n).replace(/股份有限公司|有限公司|企業|實業|環保科技|環保工程/g,"").slice(0,6);
 
 function legRow(r,di){
-  const to=r.ret?("返回"+ORIGIN.name):("至"+P(r.to).name);
+  const to=r.ret?("返回"+ORIGIN.name):("至"+destName(r.to));
   const d=el("div","leg",
     "<span class='clock'>"+toHM(r.start)+"–"+toHM(r.end)+"</span><span>車程，"+esc(to)+"</span>"+
     "<input type='number' min='0' max='300' step='5' data-fid='"+di+":leg:"+legKey(r.from,r.to)+"' value='"+r.L.mins+"'> <span class='unit'>分鐘</span>"+
@@ -896,12 +905,14 @@ function buildTables(){
     sc.rows.forEach(r=>{
       if(r.kind==="meet") h+="<tr><td class='tcol'>"+toHM(r.start)+"</td><td>集合-"+esc(day.place||CFG.place)+"</td></tr>";
       if(r.kind==="travel"){
-        const to=r.ret?("返回"+ORIGIN.name):("至"+P(r.to).name);
+        const to=r.ret?("返回"+ORIGIN.name):("至"+destName(r.to));
         h+="<tr><td class='tcol'>"+toHM(r.start)+"-"+toHM(r.end)+"</td><td>車程，"+esc(to)+"（約"+r.L.mins+"分鐘）</td></tr>";
       }
       if(r.kind==="stop"){
         const st=r.stop;
-        const main=st.kind==="lunch"?("午餐："+esc(st.name)):("<b>"+esc(st.name)+"</b>（"+esc(st.contact||"OOO")+"負責人）");
+        const main=st.kind==="lunch"
+          ? esc(/^午餐/.test(st.name)?st.name:("午餐："+st.name))
+          : ("<b>"+esc(st.name)+"</b>（"+esc(st.contact||"OOO")+"負責人）");
         h+="<tr><td class='tcol'>"+toHM(r.start)+"-"+toHM(r.end)+"</td><td>"+main+(st.addr?"<br>"+esc(st.addr):"")+"</td></tr>";
       }
     });
@@ -985,8 +996,197 @@ async function loadTimetable(){
 $("addSouth").onclick=()=>{TRAINS.south.push({no:"",dep:"07:00",arr:"08:40",run:[]});markManual();renderTrains();save();};
 $("addNorth").onclick=()=>{TRAINS.north.push({no:"",dep:"16:00",arr:"18:00",run:[]});markManual();renderTrains();save();};
 
+/* ==========================================================================
+   產生 Word 檔（.docx 就是一個 ZIP 包著幾份 XML，這裡不依賴任何外部函式庫）
+   ========================================================================== */
+let CRCT=null;
+function crc32(u8){
+  if(!CRCT){CRCT=new Uint32Array(256);
+    for(let i=0;i<256;i++){let c=i;for(let k=0;k<8;k++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);CRCT[i]=c>>>0;}}
+  let c=0xFFFFFFFF;
+  for(let i=0;i<u8.length;i++) c=CRCT[(c^u8[i])&0xFF]^(c>>>8);
+  return (c^0xFFFFFFFF)>>>0;
+}
+function zipStore(files){
+  const enc=new TextEncoder(), parts=[], central=[]; let offset=0;
+  files.forEach(f=>{
+    const nb=enc.encode(f.name), crc=crc32(f.data), n=f.data.length;
+    const lh=new Uint8Array(30+nb.length), lv=new DataView(lh.buffer);
+    lv.setUint32(0,0x04034b50,true); lv.setUint16(4,20,true); lv.setUint16(6,0x0800,true);
+    lv.setUint16(8,0,true); lv.setUint32(14,crc,true); lv.setUint32(18,n,true);
+    lv.setUint32(22,n,true); lv.setUint16(26,nb.length,true);
+    lh.set(nb,30); parts.push(lh,f.data);
+    const cd=new Uint8Array(46+nb.length), cv=new DataView(cd.buffer);
+    cv.setUint32(0,0x02014b50,true); cv.setUint16(4,20,true); cv.setUint16(6,20,true);
+    cv.setUint16(8,0x0800,true); cv.setUint16(10,0,true); cv.setUint32(16,crc,true);
+    cv.setUint32(20,n,true); cv.setUint32(24,n,true); cv.setUint16(28,nb.length,true);
+    cv.setUint32(42,offset,true); cd.set(nb,46); central.push(cd);
+    offset+=lh.length+n;
+  });
+  const cdSize=central.reduce((a,c)=>a+c.length,0);
+  const end=new Uint8Array(22), ev=new DataView(end.buffer);
+  ev.setUint32(0,0x06054b50,true); ev.setUint16(8,files.length,true);
+  ev.setUint16(10,files.length,true); ev.setUint32(12,cdSize,true); ev.setUint32(16,offset,true);
+  const all=parts.concat(central,[end]);
+  const out=new Uint8Array(all.reduce((a,x)=>a+x.length,0));
+  let p=0; all.forEach(a=>{out.set(a,p);p+=a.length;});
+  return out;
+}
+const xesc=t=>String(t==null?"":t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const FONT='<w:rFonts w:ascii="標楷體" w:eastAsia="標楷體" w:hAnsi="標楷體"/>';
+function wR(t,o){o=o||{};const z=o.size||28;
+  return '<w:r><w:rPr>'+FONT+(o.bold?'<w:b/>':'')+'<w:sz w:val="'+z+'"/><w:szCs w:val="'+z+'"/></w:rPr>'
+    +'<w:t xml:space="preserve">'+xesc(t)+'</w:t></w:r>';}
+function wP(runs,o){o=o||{};
+  return '<w:p><w:pPr>'+(o.align?'<w:jc w:val="'+o.align+'"/>':'')
+    +'<w:spacing w:before="'+(o.before||0)+'" w:after="'+(o.after||0)+'" w:line="'+(o.line||300)+'" w:lineRule="auto"/>'
+    +(o.ind?'<w:ind w:left="'+o.ind+'"/>':'')+(o.keepNext?'<w:keepNext/>':'')
+    +(o.pageBreak?'<w:pageBreakBefore/>':'')+'</w:pPr>'+runs+'</w:p>';}
+/* 外框 1 1/2pt（sz=12）、內框 1/2pt（sz=4）；w:sz 單位是 1/8 點 */
+const WBORDERS='<w:tblBorders>'
+  +['top','left','bottom','right'].map(k=>'<w:'+k+' w:val="single" w:sz="12" w:space="0" w:color="000000"/>').join('')
+  +'<w:insideH w:val="single" w:sz="4" w:space="0" w:color="000000"/>'
+  +'<w:insideV w:val="single" w:sz="4" w:space="0" w:color="000000"/></w:tblBorders>';
+function wTable(rows,widths){
+  return '<w:tbl><w:tblPr><w:tblW w:w="'+widths.reduce((a,b)=>a+b,0)+'" w:type="dxa"/>'
+    +WBORDERS+'<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>'
+    +widths.map(w=>'<w:gridCol w:w="'+w+'"/>').join('')+'</w:tblGrid>'+rows+'</w:tbl>'
+    +'<w:p><w:pPr><w:spacing w:after="60" w:line="180" w:lineRule="auto"/></w:pPr></w:p>';
+}
+function wCell(paras,w,shade){
+  return '<w:tc><w:tcPr><w:tcW w:w="'+w+'" w:type="dxa"/>'
+    +(shade?'<w:shd w:val="clear" w:color="auto" w:fill="F2F2F2"/>':'')
+    +'<w:vAlign w:val="center"/><w:tcMar><w:top w:w="50" w:type="dxa"/><w:bottom w:w="50" w:type="dxa"/>'
+    +'<w:left w:w="100" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tcMar></w:tcPr>'+paras+'</w:tc>';
+}
+const wRow=cells=>'<w:tr><w:trPr><w:cantSplit/></w:trPr>'+cells+'</w:tr>';
+
+function clockText(hm){
+  const p=String(hm||"09:00").split(":"), h=+p[0], m=+p[1];
+  return (h<12?"上午":"下午")+(h%12||12)+"時"+(m?m+"分":"整");
+}
+function buildDocXml(){
+  const days=DAYS.filter(d=>(d.stops||[]).length);
+  const CN=["一","二","三","四","五","六","七"];
+  let b='';
+  b+=wP(wR(CFG.docTitle||"訪視行程",{size:36,bold:true}),{align:"center",after:300,line:360});
+
+  // 一、集合日期
+  const dl=days.map(d=>rocLabel(d.date));
+  b+=wP(wR("一、集合日期："+(dl[0]||"")),{before:60,after:60,line:320});
+  dl.slice(1).forEach(x=>b+=wP(wR("　　　　　　　"+x),{after:60,line:320}));
+
+  // 二、集合時間
+  const times=[...new Set(days.map(d=>d.meet||CFG.meet))];
+  if(times.length<=1) b+=wP(wR("二、集合時間："+clockText(times[0]||CFG.meet)),{after:60,line:320});
+  else{
+    b+=wP(wR("二、集合時間："),{after:60,line:320});
+    days.forEach((d,i)=>b+=wP(wR("("+CN[i]+")"+shortDate(d.date)+"："+clockText(d.meet||CFG.meet)),{ind:560,after:60,line:320}));
+  }
+  // 三、集合地點
+  const places=[...new Set(days.map(d=>d.place||CFG.place))];
+  if(places.length<=1) b+=wP(wR("三、集合地點："+(places[0]||"")),{after:60,line:320});
+  else{
+    b+=wP(wR("三、集合地點："),{after:60,line:320});
+    days.forEach((d,i)=>b+=wP(wR("("+CN[i]+")"+shortDate(d.date)+"："+(d.place||CFG.place)),{ind:560,after:60,line:320}));
+  }
+  // 四、出席人員
+  b+=wP(wR("四、出席人員："),{after:60,line:320});
+  String(CFG.attendees||"").split(/\r?\n/).map(x=>x.trim()).filter(Boolean)
+    .forEach(x=>b+=wP(wR(x),{ind:560,after:60,line:320}));
+
+  // 五、訪視行程
+  b+=wP(wR("五、訪視行程："),{after:60,line:320,keepNext:true});
+  const W=[2100,7538];
+  days.forEach((day,di)=>{
+    b+=wP(wR("("+CN[di]+")"+rocLabel(day.date),{bold:true}),{ind:560,before:60,after:60,line:320,keepNext:true,pageBreak:di>0});
+    const sc=schedule(day);
+    let rows=wRow(wCell(wP(wR("時間",{size:24,bold:true}),{align:"center"}),W[0],true)
+                 +wCell(wP(wR("說明",{size:24,bold:true}),{align:"center"}),W[1],true));
+    sc.rows.forEach(r=>{
+      if(r.kind==="meet")
+        rows+=wRow(wCell(wP(wR(toHM(r.start),{size:24}),{align:"center"}),W[0])
+                  +wCell(wP(wR("集合-"+(day.place||CFG.place),{size:24})),W[1]));
+      if(r.kind==="travel"){
+        const to=r.ret?("返回"+ORIGIN.name):("至"+destName(r.to));
+        rows+=wRow(wCell(wP(wR(toHM(r.start)+"-"+toHM(r.end),{size:24}),{align:"center"}),W[0])
+                  +wCell(wP(wR("車程，"+to+"（約"+r.L.mins+"分鐘）",{size:24})),W[1]));
+      }
+      if(r.kind==="stop"){
+        const st=r.stop;
+        const head = st.kind==="lunch"
+          ? wR(/^午餐/.test(st.name)?st.name:("午餐："+st.name),{size:24})
+          : wR(st.name,{size:24,bold:true})+wR("（"+(st.contact||"OOO")+"負責人）",{size:24});
+        let cell=wP(head);
+        if(st.addr) cell+=wP(wR(st.addr,{size:24}));
+        rows+=wRow(wCell(wP(wR(toHM(r.start)+"-"+toHM(r.end),{size:24}),{align:"center"}),W[0])+wCell(cell,W[1]));
+      }
+    });
+    b+=wTable(rows,W);
+  });
+
+  // 六、建議車次
+  if(trainsReady()){
+    const T=[1900,900,1700,1000,1900,2238];
+    let rows=wRow(["日期","行程","內容","車次","搭車時間","抵達時間"]
+      .map((h,i)=>wCell(wP(wR(h,{size:24,bold:true}),{align:"center"}),T[i],true)).join(""));
+    let any=false;
+    days.forEach(day=>{
+      const sc=schedule(day), s1=pickSouth(day), n1=pickNorth(day,sc.end), d=shortDate(day.date);
+      const line=(a,c,t)=>wRow([d,a,c,t.no,t.dep,t.arr].map((v,i)=>
+        wCell(wP(wR(v,{size:24}),{align:"center"}),T[i])).join(""));
+      if(s1){rows+=line("去程",stName(CFG.originId)+"－"+stName(CFG.destId),s1);any=true;}
+      if(n1.best){rows+=line("回程",stName(CFG.destId)+"－"+stName(CFG.originId),n1.best);any=true;}
+    });
+    if(any){
+      b+=wP(wR("六、建議車次："),{before:60,after:60,line:320,keepNext:true});
+      b+=wTable(rows,T);
+    }
+  }
+  b+='<w:sectPr><w:pgSz w:w="11906" w:h="16838"/>'
+    +'<w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr>';
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+b+'</w:body></w:document>';
+}
+function makeDocx(){
+  const enc=new TextEncoder(), F=(n,t)=>({name:n,data:enc.encode(t)});
+  const ct='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+    +'<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+    +'<Default Extension="xml" ContentType="application/xml"/>'
+    +'<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
+    +'<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>';
+  const rels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    +'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>';
+  const drels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    +'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';
+  const styles='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+    +'<w:docDefaults><w:rPrDefault><w:rPr>'+FONT+'<w:sz w:val="28"/><w:szCs w:val="28"/></w:rPr></w:rPrDefault>'
+    +'<w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="300" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>'
+    +'<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style></w:styles>';
+  return zipStore([F('[Content_Types].xml',ct),F('_rels/.rels',rels),
+    F('word/_rels/document.xml.rels',drels),F('word/styles.xml',styles),
+    F('word/document.xml',buildDocXml())]);
+}
+$("btnWord").onclick=()=>{
+  if(!DAYS.some(d=>(d.stops||[]).length)){ toast("還沒有行程可以輸出"); return; }
+  try{
+    const bytes=makeDocx();
+    const blob=new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download=(CFG.docTitle||"訪視行程").replace(/[\\/:*?"<>|]/g,"")+".docx";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+    toast("Word 檔已下載");
+  }catch(e){ toast("產生失敗："+e.message); }
+};
+
 /* 設定綁定 */
-const CFG_FIELDS=["url","key","originId","destId","bufOut","bufBack","rating","price","radius","lunchMin","stay","meet","lunchFrom","lunchTo","tolerance","endTarget","endMax"];
+const CFG_FIELDS=["docTitle","attendees","url","key","originId","destId","bufOut","bufBack","rating","price","radius","lunchMin","stay","meet","lunchFrom","lunchTo","tolerance","endTarget","endMax"];
 function fillStations(){
   ["cfg-originId","cfg-destId"].forEach(id=>{
     const n=$(id); if(!n||n.options.length) return;
