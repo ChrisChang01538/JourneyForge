@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>行程規劃工具　版本公告</title>
+<link rel="icon" type="image/png" href="data:image/png;base64,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">
+<style>
+:root{
+  /* 配色取自看板娘底圖：深酒紅的夜間辦公室、鳳凰的金色羽翼 */
+  --bg:#170a0d; --bg-2:#2a1216;
+  --panel:#241317; --panel-2:#1d0f12; --panel-3:#2f191e;
+  --line:#4a2b30; --line-soft:#351f23;
+  --ink:#f4e9e4; --ink-2:#cdb3ac; --ink-3:#a08480;
+  --gold:#e8bc6a; --gold-hi:#f6d896; --gold-dim:#8a6a3a; --gold-soft:rgba(232,188,106,.12);
+  --jade:#86c9a4; --jade-soft:rgba(134,201,164,.12);
+  --amber:#eda45f; --amber-soft:rgba(237,164,95,.12);
+  --rose:#f0908a; --rose-soft:rgba(240,144,138,.12);
+  --slate:#a9c2d1; --slate-soft:rgba(169,194,209,.1);
+  --font-ui:"Noto Sans TC","PingFang TC","Heiti TC","Microsoft JhengHei",-apple-system,"Segoe UI",sans-serif;
+  --font-mono:ui-monospace,"SFMono-Regular","Roboto Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:15.5px;
+  line-height:1.75;-webkit-font-smoothing:antialiased}
+/* 頁面上緣往下的暖色暈開，接住頁首那張圖的光 */
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;
+  background:radial-gradient(1100px 460px at 50% -120px,var(--bg-2),transparent 70%)}
+.wrap{max-width:1040px;margin:0 auto;padding:22px 18px 90px;display:grid;grid-template-columns:220px 1fr;gap:28px}
+@media (max-width:820px){.wrap{grid-template-columns:1fr;gap:12px}}
+
+.masthead{grid-column:1/-1;border-top:3px solid var(--gold-dim);margin-bottom:14px;
+  position:relative;overflow:hidden;background:#1b0e11}
+.masthead h1{margin:0;font-size:27px;color:#fff;letter-spacing:.01em;
+  text-shadow:0 1px 14px rgba(0,0,0,.75)}
+.masthead .eyebrow{margin:0 0 5px;font-family:var(--font-mono);font-size:10.5px;
+  letter-spacing:.24em;color:var(--gold-hi);text-transform:uppercase;text-shadow:0 1px 8px rgba(0,0,0,.8)}
+.masthead .sub{margin:5px 0 0;color:#e6d9d2;font-size:13px;max-width:46ch;
+  text-shadow:0 1px 9px rgba(0,0,0,.85)}
+.masthead .sub code{background:rgba(255,255,255,.16);color:#f6ecdc}
+.masthead .links{white-space:nowrap}
+.masthead a.back{color:#fff;font-weight:600;font-size:13px;text-decoration:none;
+  border:1px solid rgba(240,207,146,.5);background:rgba(28,14,17,.5);padding:7px 13px;border-radius:2px}
+.masthead a.back:hover{background:var(--gold);color:#1b0e11;border-color:var(--gold)}
+/* 看板娘 Akari：整張圖鋪滿頁首，左側壓一層暗色漸層讓字讀得到 */
+.hero-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 38%;display:block}
+.hero-shade{position:absolute;inset:0;background:
+  linear-gradient(90deg,rgba(23,10,13,.95) 0%,rgba(23,10,13,.88) 32%,rgba(23,10,13,.5) 58%,rgba(23,10,13,.08) 84%,rgba(23,10,13,0) 100%)}
+/* 下緣淡出到頁面底色，圖與內文接得起來 */
+.hero-fade{position:absolute;left:0;right:0;bottom:0;height:56px;
+  background:linear-gradient(180deg,rgba(23,10,13,0),var(--bg))}
+.hero-body{position:relative;min-height:296px;padding:20px 24px;
+  display:flex;flex-direction:column;justify-content:space-between;gap:16px}
+.hero-cap{position:absolute;right:10px;bottom:8px;font-size:10.5px;letter-spacing:.1em;
+  color:rgba(255,255,255,.82);background:rgba(20,9,11,.46);padding:2px 8px;border-radius:2px;
+  text-shadow:0 1px 6px rgba(0,0,0,.9)}
+@media (max-width:820px){
+  .hero-body{min-height:240px}
+  .hero-shade{background:linear-gradient(180deg,rgba(23,10,13,.92) 0%,rgba(23,10,13,.55) 46%,rgba(23,10,13,.92) 100%)}
+  .masthead .sub{max-width:none}
+}
+
+nav.toc{align-self:start;position:sticky;top:18px;background:var(--panel);border:1px solid var(--line);
+  padding:13px 14px;font-size:13.5px}
+@media (max-width:820px){nav.toc{position:static}}
+nav.toc h2{margin:0 0 8px;font-size:10.5px;letter-spacing:.16em;color:var(--ink-3);text-transform:uppercase}
+nav.toc ul{margin:0;padding:0;list-style:none}
+nav.toc li{margin:5px 0}
+nav.toc a{color:var(--ink-2);text-decoration:none}
+nav.toc a:hover{color:var(--gold)}
+nav.toc .v{font-family:var(--font-mono);font-weight:700;color:var(--gold)}
+nav.toc .d{color:var(--ink-3);font-size:12px}
+nav.toc .rule{border-top:1px solid var(--line-soft);margin:10px 0}
+nav.toc p{margin:0;font-size:12.5px;color:var(--ink-3);line-height:1.6}
+
+main{min-width:0}
+.release{background:var(--panel);border:1px solid var(--line);padding:24px 30px 30px;margin-bottom:20px}
+@media (max-width:820px){.release{padding:18px 16px 24px}}
+.rhead{border-bottom:2px solid var(--gold-dim);padding-bottom:9px;margin-bottom:14px;
+  display:flex;flex-wrap:wrap;gap:8px 14px;align-items:baseline}
+.rhead .no{font-family:var(--font-mono);font-size:30px;font-weight:700;letter-spacing:-.01em;color:var(--gold)}
+.rhead .ttl{font-size:17px;font-weight:700;flex:1 1 auto;color:var(--ink)}
+.rhead .date{font-family:var(--font-mono);font-size:12.5px;color:var(--ink-3)}
+.lede{border-left:3px solid var(--gold);background:var(--gold-soft);padding:12px 16px;margin:0 0 18px;font-size:14.5px}
+.lede p{margin:6px 0}
+.lede p:first-child{margin-top:0}
+.lede p:last-child{margin-bottom:0}
+.lede b{color:var(--gold-hi)}
+.lede a{color:var(--gold);font-weight:600}
+
+h3.grp{font-size:12px;letter-spacing:.14em;color:var(--ink-3);text-transform:uppercase;
+  margin:22px 0 10px;padding-bottom:5px;border-bottom:1px solid var(--line-soft)}
+.item{margin:0 0 16px;padding-left:0}
+.item h4{margin:0 0 4px;font-size:15.5px;display:flex;flex-wrap:wrap;gap:8px;align-items:baseline;color:var(--ink)}
+.item p{margin:4px 0;font-size:14.5px;color:var(--ink-2)}
+.item p.tiny{font-size:13px;color:var(--ink-3);margin-top:8px}
+kbd{font-family:var(--font-mono);font-size:12px;border:1px solid var(--line-soft);background:var(--panel-2);border-radius:2px;padding:1px 5px;color:var(--ink)}
+.item ul{margin:5px 0;padding-left:1.3em;font-size:14.5px;color:var(--ink-2)}
+.item li{margin:3px 0}
+.item b{color:var(--ink)}
+
+.tg{font-size:10.5px;letter-spacing:.1em;font-weight:700;padding:2px 8px;border-radius:2px;white-space:nowrap;
+  border:1px solid;line-height:1.5}
+/* 底色本來就是紅的，標籤不能再靠紅色分辨，改用金／玉／琥珀／青灰 */
+.tg-new{color:var(--gold);border-color:var(--gold-dim);background:var(--gold-soft)}
+.tg-buff{color:var(--jade);border-color:#3f6b55;background:var(--jade-soft)}
+.tg-adj{color:var(--amber);border-color:#7a5330;background:var(--amber-soft)}
+.tg-fix{color:var(--slate);border-color:#4a5b66;background:var(--slate-soft)}
+.tg-warn{color:var(--rose);border-color:#7a4340;background:var(--rose-soft)}
+
+.delta{font-family:var(--font-mono);font-size:13px;background:var(--panel-2);border:1px solid var(--line-soft);
+  border-left:3px solid var(--gold-dim);padding:9px 13px;margin:8px 0;white-space:pre-wrap;line-height:1.85;
+  overflow-x:auto;color:var(--ink-2)}
+.delta b{color:var(--gold-hi);font-weight:700}
+.arrow{color:var(--ink-3)}
+
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}
+th,td{border:1px solid var(--line);padding:6px 10px;vertical-align:top;text-align:left;color:var(--ink-2)}
+th{background:var(--panel-3);font-weight:700;font-size:12.5px;letter-spacing:.04em;color:var(--ink)}
+code{font-family:var(--font-mono);font-size:.9em;background:rgba(255,255,255,.07);color:#f2d9ae;
+  padding:1px 5px;border-radius:2px}
+
+.known{border-left:3px solid var(--amber);background:var(--amber-soft);padding:11px 15px;margin:16px 0 0;font-size:14.5px}
+.known b{display:block;margin-bottom:3px;color:var(--amber)}
+.known ul{margin:5px 0 0;padding-left:1.3em;color:var(--ink-2)}
+.foot{grid-column:1/-1;font-size:12.5px;color:var(--ink-3);border-top:1px solid var(--line-soft);padding-top:12px;margin-top:6px}
+.foot p{margin:4px 0}
+
+/* 列印一律轉回白底黑字：夜色好看，但不該印成一整片黑 */
+@media print{
+  @page{size:A4;margin:2cm}
+  body{background:#fff;color:#000;font-size:11.5pt;line-height:1.6}
+  body::before{display:none}
+  .wrap{display:block;max-width:none;padding:0}
+  nav.toc,.masthead .links,.hero-img,.hero-shade,.hero-fade,.hero-cap{display:none}
+  .masthead{background:#fff;overflow:visible;border-top:3px solid #000}
+  .hero-body{min-height:0;padding:13px 0 0}
+  .masthead h1{color:#000;text-shadow:none;font-size:20pt}
+  .masthead .sub,.masthead .eyebrow{color:#333;text-shadow:none}
+  .masthead .sub code{background:#eee;color:#000}
+  .release{background:#fff;border:0;padding:0;margin-bottom:24pt}
+  .rhead{border-bottom:2px solid #000}
+  .rhead .no,.rhead .ttl{color:#000}
+  .rhead .date,h3.grp,.foot,nav.toc p{color:#555}
+  .lede,.known{background:#f4f4f4;border-left:3px solid #666}
+  .lede b,.lede a,.known b{color:#000}
+  .item h4,.item p,.item ul,.item b,td,th{color:#000}
+  .delta{background:#f4f4f4;border-color:#ccc;border-left-color:#666;color:#000}
+  .delta b{color:#000}
+  .tg{color:#000!important;border-color:#666!important;background:#eee!important}
+  th{background:#eee}
+  th,td{border-color:#999}
+  code{background:#eee;color:#000}
+  .item,table,tr,.delta,.lede,.known{page-break-inside:avoid}
+  .rhead,h3.grp,.item h4{page-break-after:avoid}
+  a{color:#000;text-decoration:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <img class="hero-img" src="akari-office.jpg" alt="看板娘 Akari 坐在辦公室的座位上" loading="eager">
+    <div class="hero-shade"></div>
+    <div class="hero-body">
+      <div>
+        <p class="eyebrow">JourneyForge ／ Release Notes</p>
+        <h1>行程規劃工具　版本公告</h1>
+        <p class="sub">每次改版做了什麼、對你的操作有什麼差別。技術細節在 <code>CHANGELOG.md</code>，回饋清單在 <code>FEEDBACK.md</code>。</p>
+      </div>
+      <span class="links"><a class="back" href="guide.html">新手指南</a> <a class="back" href="sop.html">系統說明</a> <a class="back" href="index.html">← 回到工具</a></span>
+    </div>
+    <div class="hero-fade"></div>
+    <span class="hero-cap">Akari, the Phoenix Secretary</span>
+  </header>
+
+  <nav class="toc">
+    <h2>版本</h2>
+    <ul>
+      <li><a href="#v2602"><span class="v">26.02</span><br><span class="d">2026/8/28　看板娘上工，回饋有路可走</span></a></li>
+      <li><a href="#v2601"><span class="v">26.01</span><br><span class="d">2026/8/27　六項使用回饋</span></a></li>
+      <li><a href="#v2600"><span class="v">26.00</span><br><span class="d">基準版</span></a></li>
+    </ul>
+    <div class="rule"></div>
+    <p>版號是「西元年後兩碼．當年度第幾次發版」。工具右上角的徽章就是你手上這一版。</p>
+  </nav>
+
+  <main>
+
+  <!-- ══════════════════ 26.02 ══════════════════ -->
+  <section class="release" id="v2602">
+    <div class="rhead">
+      <span class="no">26.02</span>
+      <span class="ttl">看板娘上工，回饋有路可走</span>
+      <span class="date">2026/8/28</span>
+    </div>
+
+    <div class="lede">
+      <p>這一版做了兩件事。看得到的那件：這一頁的頁首換成了看板娘 <b>Akari</b>，整頁配色也跟著她的底圖走——深酒紅的夜間辦公室配鳳凰的金色羽翼。</p>
+      <p>用得到的那件：<b>工具右下角多了一顆「意見回饋」</b>。以前想講什麼要私訊或當面說，講完常常沒有下文；現在按下去就地寫、截圖直接貼、送出給你一組編號。前面九筆回饋全都是這樣一句話換來一次改版的，接下來會更快。</p>
+      <p>排程、輸出、車次建議的邏輯完全沒有變動，跟 26.01 一樣。</p>
+    </div>
+
+    <h3 class="grp">✚ 新增</h3>
+
+    <div class="item">
+      <h4>右下角的「意見回饋」<span class="tg tg-new">✚ 新增</span></h4>
+      <p>不論在哪一步，右下角都有一顆<b>意見回饋</b>。按下去是<b>就地彈出的視窗，不會換頁、不會開新分頁</b>——你貼好的名單、排好的行程、跳出來的紅字警示都還在，可以一邊對照一邊寫。</p>
+      <p><b>截圖直接貼進來。</b><kbd>Win</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> 剪好畫面，回到視窗按 <kbd>Ctrl</kbd>+<kbd>V</kbd> 就附上去了；拖曳圖檔或按「選擇檔案」也行，最多 3 張。一張截圖通常勝過三段文字描述。</p>
+      <p>寫什麼都可以：哪裡卡住、哪個詞看不懂、希望多什麼功能，或只是覺得某個地方怪怪的。送出後會給你一組<b>收件編號</b>，之後想追進度報編號就好。</p>
+      <p class="tiny">要先填通行碼連線才送得出去。視窗裡的「附上環境資訊」是版本、瀏覽器、這次幾天幾站——<b>不會夾帶單位名稱、地址或出席名單</b>，不想附取消勾選即可。</p>
+    </div>
+
+    <div class="item">
+      <h4>版本公告頁的看板娘頁首<span class="tg tg-new">✚ 新增</span></h4>
+      <p>頁首整條換成 Akari 在辦公室的圖，標題壓在左側的暗色漸層上。手機上漸層會自動轉成上下向，字一樣讀得到。</p>
+      <p>列印或存成 PDF 時圖不會印出來，標題會自動轉回黑字——不會浪費碳粉。</p>
+    </div>
+
+    <div class="item">
+      <h4>整頁配色跟著看板娘走<span class="tg tg-adj">▼ 調整</span></h4>
+      <p>原本這一頁跟工具本體同一套淺色配色，配上 Akari 的底圖會打架。現在整頁改成她那張圖的色系：深酒紅的底、鳳凰羽翼的金色當重點色。</p>
+      <div class="delta">版本公告頁底色：<span class="arrow">淺灰藍（同工具本體） ⇒ </span><b>深酒紅＋鳳凰金</b></div>
+      <p>底色本身已經是紅的，原本靠紅色分辨的標籤會糊掉，所以標籤改用<b>金、玉綠、琥珀、青灰、玫瑰</b>五色分開。<b>工具本體、新手指南、系統說明維持原本的淺色</b>——那些是每天在用的作業畫面，白底看久了不累。</p>
+      <p>列印或存成 PDF 一樣是白底黑字，不會印出一整片深色。</p>
+    </div>
+
+    <div class="item">
+      <h4>分頁小圖示（favicon）<span class="tg tg-new">✚ 新增</span></h4>
+      <p>工具、新手指南、系統說明、版本公告四頁都換上鳳凰徽記。圖示直接寫在網頁裡，不用另外上傳檔案。</p>
+    </div>
+
+    <h3 class="grp">▲ 強化</h3>
+
+    <div class="item">
+      <h4>新手指南補上「高鐵起訖站要自己設」<span class="tg tg-buff">▲ 強化</span></h4>
+      <p>有人排臺中的行程，集合地點改好了，但<b>沒去「設定 → 高鐵班次」改起訖站</b>，結果公文上的車次與時刻整段還是左營那一段——行程本身是對的，畫面也不會報錯，很容易就這樣發出去。</p>
+      <div class="delta">高鐵起訖站：<span class="arrow">預設臺北 → 左營，</span><b>不會跟著集合地點自動變，換城市一定要自己改</b></div>
+      <p>26.01 起工具會在對不上時跳出提示，附「把第一組改成 ◯◯」的按鈕；但那個提示<b>只在地址裡出現「高鐵」兩個字時才推斷得出車站</b>，寫成一般路名就不會提示。新手指南這次把這件事寫進步驟裡，「最常踩的坑」也從五條變六條，新的第 1 條就是它。</p>
+    </div>
+  </section>
+
+  <!-- ══════════════════ 26.01 ══════════════════ -->
+  <section class="release" id="v2601">
+    <div class="rhead">
+      <span class="no">26.01</span>
+      <span class="ttl">午餐可以不排、解散地點分開填、排不下也照樣排完</span>
+      <span class="date">2026/8/27</span>
+    </div>
+
+    <div class="lede">
+      <p>這一版處理了六筆使用回饋。最大的兩個改變：<b>午餐不再是強制的</b>，13:00 之後才集合的行程會自動判斷不需要午餐；還有<b>行程塞不下時，工具不會再把地點丟著不排</b>，而是照樣排完，把超出的部分標紅，讓你自己決定要縮短停留、刪站，還是跟對方溝通。</p>
+      <p>另外「訪視」這個詞全面換成「行程」，「工廠／廠方」換成「拜訪單位」——這個工具本來就不只用在訪視。</p>
+    </div>
+
+    <h3 class="grp">✚ 新增</h3>
+
+    <div class="item">
+      <h4>午餐可以自己決定要不要排<span class="tg tg-new">✚ 新增</span></h4>
+      <p>「行程日期」每一天多了一個<b>午餐</b>勾選框。取消勾選，那一天就不會排午餐。</p>
+      <p>預設值會自動判斷：<b>集合時間如果已經在 13:00 之後，這一格會自動取消勾選</b>——那種行程高機率不需要午餐。真的要吃，自己勾回來就好，勾過之後就不會再被自動判斷蓋掉。</p>
+      <p>每次都不用午餐的話，到「設定 → 午餐條件 → 午餐排程」選「一律不排」。</p>
+      <div class="delta">午餐排程：<span class="arrow">一律插入 ⇒ </span><b>依集合時間自動判斷，可逐日勾選</b></div>
+    </div>
+
+    <div class="item">
+      <h4>解散地點可以和集合地點不一樣<span class="tg tg-new">✚ 新增</span></h4>
+      <p>「行程日期」多了「<b>解散同集合</b>」勾選框，預設打勾。取消勾選，右邊的<b>解散地點</b>欄位就能填——例如早上在臺中集合、傍晚在臺南解散。</p>
+      <p>解散地點會真的進入計算：最後一段車程改成開到解散地點，Google 地圖路線的終點、Word 與列印版的「集合地點」欄位也會一起帶出來。</p>
+    </div>
+
+    <div class="item">
+      <h4>高鐵可以開好幾組起訖站<span class="tg tg-new">✚ 新增</span></h4>
+      <p>出席人員從不同縣市出發時，到「設定 → 高鐵班次」按 <b>＋ 加車次</b>，就能加開第二、第三組起訖站，最多六組。每一組各自建議去程與回程車次。</p>
+      <p>組名預設是「第一組」「第二組」，可以改成「北部團」「中部團」這種一看就懂的名字。Word 與列印版的建議車次表會標上組名。</p>
+    </div>
+
+    <div class="item">
+      <h4>集合地點和車次設定對不上時會提醒<span class="tg tg-new">✚ 新增</span></h4>
+      <p>集合地點或解散地點看起來是某個高鐵站，但車次設定的終點還停在別的站，「行程日期」下方會跳出提示，附兩顆按鈕：<b>把第一組改成 ○○</b>、<b>加一組到 ○○</b>。</p>
+      <p>工具只會提醒，不會自己改你的設定。</p>
+    </div>
+
+    <h3 class="grp">▼ 調整</h3>
+
+    <div class="item">
+      <h4>行程塞不下時，改成照樣排完並標紅<span class="tg tg-adj">▼ 調整</span></h4>
+      <p>以前排不進去的地點會被丟在一旁不排，只給你「怎麼改才塞得下」的建議。現在<b>所有地點一律排完</b>，超出預設結束時間的部分改用紅色警示：</p>
+      <ul>
+        <li>時間軸上超時的區塊變成<b>紅色斜紋</b>，超過「最晚結束」的還會<b>發光閃動</b></li>
+        <li>時間軸多了兩條標線：橘色虛線是<b>目標結束</b>、紅色實線是<b>最晚結束</b>；右邊界會跟著行程延伸，排到 19:30 也看得見</li>
+        <li>超時的行程卡片變成<b>紅框</b></li>
+        <li>每天的結尾直接寫「整天到 18:30 才結束，超出目標結束時間 2 小時 30 分」</li>
+      </ul>
+      <p>原本那份「哪一種調整可以回到時限內」的實際試算保留著，只在超過最晚結束時才出現。</p>
+      <div class="delta">最晚結束時間：<span class="arrow">硬性上限（超過就不排） ⇒ </span><b>軟性目標（超過照排，紅色警示）</b>
+規劃結果：<span class="arrow">有 1 家排不進去 ⇒ </span><b>已全部排入，有 1 天超出目標結束時間</b></div>
+      <p>這樣改是因為：排不進去的時候，該砍哪一站、該跟誰溝通縮短停留，是你才知道的事。工具先把完整的樣子排出來，你才有東西可以拿去談。</p>
+    </div>
+
+    <div class="item">
+      <h4>「訪視」全面改成「行程」<span class="tg tg-adj">▼ 調整</span></h4>
+      <p>這個工具不只用在訪視，稽核、輔導、參訪一樣能排，所以把綁定特定情境的詞都換掉了。</p>
+      <div class="delta">訪視日期　　<span class="arrow">⇒</span> <b>行程日期</b>
+訪視 3 廠　　<span class="arrow">⇒</span> <b>行程 3 站</b>
+＋ 空白訪視　<span class="arrow">⇒</span> <b>＋ 空白行程點</b>
+每廠停留　　<span class="arrow">⇒</span> <b>每站停留</b>
+廠方午休　　<span class="arrow">⇒</span> <b>拜訪單位午休</b>
+五、訪視行程 <span class="arrow">⇒</span> <b>五、行程安排</b>（公文）
+文件標題預設 <span class="arrow">訪視行程 ⇒</span> <b>行程表</b></div>
+      <p>你自己填過的文件標題不受影響，還是照你填的。</p>
+    </div>
+
+    <div class="item">
+      <h4>「行程日期」拿掉「民國格式」欄，工作區加寬<span class="tg tg-adj">▼ 調整</span></h4>
+      <p>民國年在每一天的行程卡片標題、Word 和列印版都還在，那一欄只是重複顯示，位置讓給新增的「午餐」與「解散地點」。</p>
+      <div class="delta">工作區寬度：<span class="arrow">1040px ⇒ </span><b>1180px</b></div>
+    </div>
+
+    <div class="item">
+      <h4>每天結尾的狀態標籤講得更清楚<span class="tg tg-adj">▼ 調整</span></h4>
+      <div class="delta">有衝突／時段無衝突 <span class="arrow">⇒</span> <b>壓到午休／午休時段淨空</b></div>
+      <p>超時已經有自己的紅色標籤和說明，跟午休衝突混在同一個標籤裡，反而看不出是哪一種問題。</p>
+    </div>
+
+    <h3 class="grp">✖ 修正</h3>
+
+    <div class="item">
+      <h4>班次編輯區的方向標題顯示 undefined<span class="tg tg-fix">✖ 修正</span></h4>
+      <p>「檢視／手動編輯班次」裡，「去程」「回程」旁邊本來應該顯示「臺北 → 左營」，實際顯示的是 <code>undefined → undefined</code>。已修正。</p>
+    </div>
+
+    <div class="item">
+      <h4>行程排到半夜時，時間顯示會繞回 00:xx<span class="tg tg-fix">✖ 修正</span></h4>
+      <p>以前排程有硬性上限碰不到這個問題，現在超時照排就看得到了。25:10 才看得出來是排到隔天凌晨。</p>
+    </div>
+
+    <h3 class="grp">⚠ 注意</h3>
+
+    <div class="item">
+      <h4>舊的案件連結和設定都還能用<span class="tg tg-warn">⚠ 注意</span></h4>
+      <p>以前存的案件打開後：解散地點一律當成「同集合地點」、午餐一律當成「自動判斷」、原本那一組起訖站會變成「第一組」。<b>不需要做任何轉檔。</b></p>
+      <p>這台電腦上的設定（通行碼、排程規則、手動改過的車程）也都保留。</p>
+    </div>
+
+    <div class="known">
+      <b>已知問題</b>
+      <ul>
+        <li>內建的靜態班表只涵蓋<b>臺北－左營</b>。加開其他起訖站時，要先填通行碼連上班表資料庫才會有車次建議。</li>
+        <li>疏運期間的加班車完全沒有處理，連假前後請自行到台灣高鐵官網核對。</li>
+        <li>車程仍是依座標推估，誤差約 ±10–15 分鐘。實際走過之後把分鐘數填回去，之後排同一段就會用你填的數字。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ══════════════════ 26.00 ══════════════════ -->
+  <section class="release" id="v2600">
+    <div class="rhead">
+      <span class="no">26.00</span>
+      <span class="ttl">基準版</span>
+      <span class="date">—</span>
+    </div>
+    <div class="lede">
+      <p>版控機制建立之前的既有功能，不回頭補寫歷史。功能範圍請看<a href="guide.html" style="color:var(--gold);font-weight:600">新手指南</a>與<a href="sop.html" style="color:var(--gold);font-weight:600">系統說明</a>。</p>
+    </div>
+  </section>
+
+  </main>
+
+  <footer class="foot">
+    <p>版號規則：西元年後兩碼．當年度第幾次發版。跨年從 01 重新起算，上線後的急件修正用 26.01a、26.01b。</p>
+    <p>有建議或發現問題，直接跟管理者說，會登記進 <code>FEEDBACK.md</code> 排進後續版本；不採納的也會寫明理由。</p>
+  </footer>
+
+</div>
+</body>
+</html>

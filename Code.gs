@@ -10,11 +10,17 @@
  *                       Places API (New)。沒填就不能精確定位、不能搜午餐。
  *   TDX_CLIENT_ID       選填。TDX 運輸資料流通服務的金鑰，用來更新高鐵班表。
  *   TDX_CLIENT_SECRET   選填。到 https://tdx.transportdata.tw 免費註冊後取得。
+ *   FEEDBACK_FOLDER_ID  不用自己填。第一次有人送出帶截圖的回饋時，程式會在這個
+ *                       帳號的雲端硬碟建一個「JourneyForge 回饋附件」資料夾，
+ *                       並把 ID 寫回這裡。想改放到別的資料夾就手動覆蓋這一項。
  *
  * 高鐵班表怎麼更新：使用者端不會呼叫 TDX，只會讀試算表。
  * 由你在 Apps Script 編輯器手動執行 refreshTimetable()，或設一個「時間驅動」觸發程序
  * （例如每月一次）自動跑。跑完「班表」分頁就是最新的，前端會顯示更新日期。
  * 抓的是「定期時刻表」（例行班表），不含疏運或加班車。
+ *
+ * ⚠ 26.02 起多了「回饋」功能，會用到雲端硬碟（DriveApp）。從舊版更新上來的話，
+ *   重新部署後第一次執行會要求「重新授權」，多勾一項雲端硬碟權限，這是正常的。
  *
  * 部署：右上「部署 → 新增部署作業 → 網頁應用程式」
  *   執行身分：我　　誰可以存取：任何人
@@ -26,6 +32,12 @@
  *   餐廳快取   格號 | 名稱 | 地址 | 緯度 | 經度 | 評分 | 價位 | 營業時間JSON | 更新時間
  *   案件       案件ID | 標題 | 日期 | 訪視家數 | 建立時間 | 更新時間 | Markdown | JSON
  *              Markdown 給人看，JSON 給程式還原成可編輯的行程。同一個案件ID 會更新既有列。
+ *   回饋       收件編號 | 時間 | 使用者 | 版本 | 分類 | 滿意度 | 內容 | 附件 | 環境 | 狀態 | 處理備註
+ *              使用者在工具右下角「意見回饋」送出的內容。狀態預設「待處理」，
+ *              由維護者判斷要不要升成 FEEDBACK.md 裡的 FB-0xx。
+ *              截圖存到雲端硬碟，這裡只放連結；附件不對外開放，要用這個帳號才看得到。
+ *   使用紀錄   時間 | 使用者 | 動作 | 案件ID | 標題 | 天數 | 站數
+ *              管考用。前端射後不理，寫失敗不影響使用者操作。
  *   班表       方向 | 車次 | 行駛日 | 十二個站別欄位 | 更新日期
  *              一列一班車。站別欄位填該班車在那一站的停靠時刻：
  *                空白        該站不停
@@ -53,6 +65,8 @@ function doPost(e) {
       case 'saveCase':  out = { ok: true, data: saveCase_(req) }; break;
       case 'loadCase':  out = { ok: true, data: loadCase_(req) }; break;
       case 'listCases': out = { ok: true, data: listCases_() }; break;
+      case 'feedback':  out = { ok: true, data: feedback_(req) }; break;
+      case 'log':       out = { ok: true, data: log_(req) }; break;
       default: throw new Error('不認得的 action：' + req.action);
     }
   } catch (err) {
@@ -82,6 +96,77 @@ function fresh_(ts, days) {
 function today_() {
   return Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd');
 }
+/* ========================= 意見回饋 ========================= */
+/**
+ * 前端右下角「意見回饋」送過來的內容。
+ * 截圖走 Drive、文字走試算表：試算表儲存格有五萬字上限，圖片塞不進去，
+ * 而且附件放 Drive 之後，維護者可以直接在資料夾裡一次看完所有截圖。
+ */
+function feedback_(req) {
+  var text = String(req.text || '').trim();
+  if (!text) throw new Error('回饋內容是空的');
+  if (text.length > 5000) text = text.slice(0, 5000) + '…（超過 5000 字，已截斷）';
+
+  var sh = sheet_('回饋', ['收件編號', '時間', '使用者', '版本', '分類', '滿意度',
+                          '內容', '附件', '環境', '狀態', '處理備註']);
+  var id = 'R-' + ('0000' + sh.getLastRow()).slice(-4);   // 標題列算第 1 列，首筆就是 R-0001
+
+  var links = [];
+  var files = (req.files || []).slice(0, 3);
+  for (var i = 0; i < files.length; i++) {
+    try {
+      links.push(fbSave_(files[i], id, i + 1));
+    } catch (e) {
+      links.push('（第 ' + (i + 1) + ' 張存檔失敗：' + e.message + '）');
+    }
+  }
+
+  var rate = Number(req.rate || 0);
+  sh.appendRow([
+    id, new Date(), String(req.user || ''), String(req.app || ''),
+    String(req.cat || ''), rate ? rate + ' / 5' : '',
+    text, links.join('\n'),
+    req.env ? JSON.stringify(req.env) : '',
+    '待處理', ''
+  ]);
+  return { id: id, files: links.length };
+}
+
+/** 一張截圖存進雲端硬碟，回傳連結。刻意不開共用連結——回饋截圖可能有單位名稱。 */
+function fbSave_(f, id, n) {
+  var b64 = String(f && f.b64 || '');
+  if (!b64) throw new Error('沒有內容');
+  var bytes = Utilities.base64Decode(b64);
+  if (bytes.length > 5 * 1024 * 1024) throw new Error('超過 5MB');
+  var mime = String(f.mime || 'image/png');
+  var ext = (mime.split('/')[1] || 'png').replace(/[^a-z0-9]/gi, '').slice(0, 5);
+  var name = id + '-' + n + '.' + ext;
+  return fbFolder_().createFile(Utilities.newBlob(bytes, mime, name)).getUrl();
+}
+
+/** 回饋附件的資料夾。沒設定就自己建一個，並把 ID 記回指令碼屬性，省一道人工設定。 */
+function fbFolder_() {
+  var id = prop_('FEEDBACK_FOLDER_ID');
+  if (id) {
+    try { return DriveApp.getFolderById(id); } catch (e) { /* 被刪或沒權限就重建 */ }
+  }
+  var name = 'JourneyForge 回饋附件';
+  var it = DriveApp.getFoldersByName(name);
+  var folder = it.hasNext() ? it.next() : DriveApp.createFolder(name);
+  PropertiesService.getScriptProperties().setProperty('FEEDBACK_FOLDER_ID', folder.getId());
+  return folder;
+}
+
+/* ========================= 使用紀錄 ========================= */
+/** 前端 logUse() 射後不理送過來的管考資料。 */
+function log_(req) {
+  var sh = sheet_('使用紀錄', ['時間', '使用者', '動作', '案件ID', '標題', '天數', '站數']);
+  sh.appendRow([new Date(), String(req.user || ''), String(req.act || ''),
+                String(req.id || ''), String(req.title || ''),
+                Number(req.days || 0), Number(req.count || 0)]);
+  return { ok: true };
+}
+
 /** deep=true 時會真的各打一次 API，才知道金鑰與權限到底有沒有問題 */
 function status_(req) {
   var out = { sheet: '', geocode: '', places: '', tdx: prop_('TDX_CLIENT_ID') ? '已設定' : '未設定' };
