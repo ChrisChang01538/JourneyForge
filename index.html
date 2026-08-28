@@ -1064,13 +1064,24 @@ function pickNorth(day,end,r){
 /* Apps Script 介接 */
 async function gas(action,payload){
   if(!gasUrl()) throw new Error("尚未設定 Apps Script 網址");
-  const res=await fetch(gasUrl(),{
-    method:"POST",
-    headers:{"Content-Type":"text/plain;charset=utf-8"},  /* 避開 CORS 預檢 */
-    body:JSON.stringify(Object.assign({action,key:CFG.key},payload||{}))
-  });
+  let res;
+  try{
+    res=await fetch(gasUrl(),{
+      method:"POST",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},  /* 避開 CORS 預檢 */
+      body:JSON.stringify(Object.assign({action,key:CFG.key},payload||{}))
+    });
+  }catch(netErr){
+    const e=new Error("連不上後端："+netErr.message);
+    if(action!=="err"){ e._logged=true; reportErr("後端",action,e.message); }
+    throw e;
+  }
   const j=await res.json();
-  if(!j.ok) throw new Error(j.error||"服務回應異常");
+  if(!j.ok){
+    const e=new Error(j.error||"服務回應異常");
+    if(action!=="err"){ e._logged=true; reportErr("後端",action,e.message); }
+    throw e;
+  }
   return j.data;
 }
 async function geocodeAll(items){
@@ -1158,6 +1169,8 @@ async function run(){
     });
     if(out.left.length){
       rep.push({bad:true,text:"有 "+out.left.length+" 個地點沒有任何一天可以放："+out.left.map(x=>P(x).name).join("、")+"，請先在「行程日期」補上日期"});
+      reportErr("排程","有地點排不進去",out.left.length+" 個地點沒有任何一天可以放",
+                out.left.map(x=>P(x).name).join("、"));
     }
     /* 超時不再是「排不進去」，而是排完了但需要你決定怎麼縮（FB-006）。
        試算調整方式要重跑整個分天，成本高，所以只有真的超過「最晚結束」才跑 */
@@ -1167,6 +1180,8 @@ async function run(){
         "，時間軸與卡片已用紅色標示，可縮短停留、刪站或把站移到別天。"});
     }
     if(hardDays){
+      reportErr("排程","超過最晚結束時間",hardDays+" 天超過 "+CFG.endMax,
+                "共 "+days.length+" 天、"+rows.length+" 站");
       setStatus("試算可行的調整方式…",true); await sleep(0);
       const fixes=await suggestFix(days,ids);
       if(fixes.length){
@@ -1186,7 +1201,8 @@ async function run(){
     if(!hasBackend()) rep.push({bad:false,text:"未輸入通行碼：地址用縣市層級粗略定位、午餐是占位，請在設定裡填通行碼以啟用完整功能。"});
     showReport(rep);
     setStatus("排好了，下方可以拖曳微調。"); logUse("規劃行程");
-  }catch(e){ setStatus("規劃失敗："+e.message); }
+  }catch(e){ setStatus("規劃失敗："+e.message);
+             if(!e._logged) reportErr("排程","規劃行程",e.message,e.stack); }
   finally{ busy=false; $("btnRun").disabled=false; save(); }
 }
 function showReport(rep){
@@ -1481,14 +1497,55 @@ function dayFoot(day,sc){
    案件存檔：Markdown 給人看、JSON 給程式還原，同一個案件 ID 更新同一列
    ========================================================================== */
 let CASE_ID="";
-/* 管考用：射後不理，失敗不影響使用者 */
+/* 管考用：射後不理，失敗不影響使用者。
+   踩過的坑第 5 條——`log` 這個 action 從來沒在後端存在過，前端 .catch(()=>{})
+   把錯誤全吃掉，文件寫了一年的「使用紀錄」其實一列都沒寫進去。
+   所以現在射後不理也要留一條路知道它有沒有成功：失敗就進錯誤佇列。 */
 function logUse(act){
   if(!hasBackend()) return;
   const days=DAYS.filter(d=>(d.stops||[]).length);
   gas("log",{user:CFG.user||"",act:act,id:CASE_ID,title:CFG.docTitle||"",
     days:days.length,
-    count:days.reduce((a,d)=>a+d.stops.filter(x=>x.kind==="visit").length,0)}).catch(()=>{});
+    count:days.reduce((a,d)=>a+d.stops.filter(x=>x.kind==="visit").length,0)})
+    .catch(()=>{});   /* gas() 內部已經 reportErr 過，這裡只是別讓它變成未捕捉的 rejection */
 }
+
+/* ==========================================================================
+   錯誤回報：寫進試算表「錯誤」分頁，後台的「錯誤與健康」看這張
+   送不出去（沒通行碼、離線、後端掛了）就先存 localStorage，下次進站補送。
+   ========================================================================== */
+const ERRQ="jf_errq";
+const ERR_SEEN=new Set();          /* 同一則訊息一次連線只送一次，避免洗版 */
+function errQPush(o){
+  try{ const a=JSON.parse(localStorage.getItem(ERRQ)||"[]");
+       a.push(o); localStorage.setItem(ERRQ,JSON.stringify(a.slice(-20))); }catch(_){}
+}
+function reportErr(src,act,msg,detail){
+  const text=String(msg||"").slice(0,500);
+  const sig=src+"|"+act+"|"+text;
+  if(ERR_SEEN.has(sig)) return; ERR_SEEN.add(sig);
+  let env=null; try{ env=fbEnvInfo(); }catch(_){}
+  const o={user:(typeof CFG!=="undefined"&&CFG.user)||"",app:APP_VERSION,src:src,act:String(act||""),
+           msg:text,detail:String(detail||"").slice(0,2000),env:env};
+  console.warn("[JourneyForge]",src,act,text);
+  if(!hasBackend()){ errQPush(o); return; }
+  gas("err",o).catch(()=>errQPush(o));
+}
+async function errFlush(){
+  if(!hasBackend()) return;
+  let a=[]; try{ a=JSON.parse(localStorage.getItem(ERRQ)||"[]"); }catch(_){}
+  if(!a.length) return;
+  localStorage.removeItem(ERRQ);
+  for(const o of a){
+    try{ await gas("err",o); }catch(_){ errQPush(o); break; }
+  }
+}
+addEventListener("error",e=>{ reportErr("前端","未捕捉例外",e.message,
+  (e.filename||"")+":"+(e.lineno||0)+" "+((e.error&&e.error.stack)||"")); });
+addEventListener("unhandledrejection",e=>{
+  const r=e.reason; if(r&&r._logged) return;
+  reportErr("前端","未處理的 rejection",(r&&r.message)||String(r),(r&&r.stack)||"");
+});
 function newCaseId(){
   const d=new Date(), p=n=>String(n).padStart(2,"0");
   return "jf"+d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+"-"+Math.random().toString(36).slice(2,8);
@@ -2138,7 +2195,7 @@ while(ITEMS.length<3) ITEMS.push(blankRow());
 const _vb=$("verBadge"); if(_vb) _vb.textContent="v"+APP_VERSION;
 normRoutes();
 bindCfg(); showUrl(); renderConnect(); renderDays(); renderPlaces(); updateInfo(); renderRoutes(); renderEditor();
-if(hasBackend()) loadTimetable();
+if(hasBackend()){ loadTimetable(); errFlush(); }   /* 上次送不出去的錯誤，這次補送 */
 (async()=>{
   const cid=new URLSearchParams(location.search).get("case");
   if(!cid) return;

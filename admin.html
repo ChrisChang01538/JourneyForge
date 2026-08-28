@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>JourneyForge 後台</title>
+<style>
+:root{
+  --ink:#15202a; --ink-2:#48606f; --ink-3:#7d94a1;
+  --paper:#e9eef1; --surface:#fff; --rule:#c7d4db; --rule-soft:#dfe7eb;
+  --teal:#0f6b68; --teal-soft:#e0efee;
+  --sand:#e8dcbd; --sand-ink:#7a6323;
+  --alert:#ab3226; --alert-soft:#fbe9e6;
+  --warn:#9a6b1c; --warn-soft:#fbf1de;
+  --font-ui:"Noto Sans TC","PingFang TC","Heiti TC","Microsoft JhengHei",-apple-system,"Segoe UI",sans-serif;
+  --font-mono:ui-monospace,"SFMono-Regular","Roboto Mono",Menlo,Consolas,monospace;
+
+  /* 圖表用色。前五個是驗證過的類別色序（固定順序、不循環），
+     狀態色另成一組，永遠搭配文字標籤，不靠顏色單獨表意。 */
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4;
+  --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b;
+  --grid:#e6ecef; --axis:#c7d4db;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1240px;margin:0 auto;padding:20px 18px 80px}
+h1,h2,h3{margin:0}
+button{font-family:inherit;font-size:13px;cursor:pointer}
+.btn{border:1px solid var(--rule);background:var(--surface);color:var(--ink);padding:7px 13px;border-radius:2px;transition:background .12s,border-color .12s}
+.btn:hover{background:var(--teal-soft);border-color:var(--teal)}
+.btn-primary{background:var(--teal);border-color:var(--teal);color:#fff}
+.btn-primary:hover{background:#0b5754;border-color:#0b5754}
+.btn[disabled],.btn-primary[disabled]{opacity:.55;cursor:default}
+.btn-sm{padding:4px 9px;font-size:12px}
+.btn-danger{border-color:var(--alert);color:var(--alert)}
+.btn-danger:hover{background:var(--alert);color:#fff;border-color:var(--alert)}
+:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+input,select,textarea{font-family:inherit;font-size:14px;color:var(--ink);border:1px solid var(--rule);background:#fff;border-radius:2px;padding:6px 8px}
+input:focus,select:focus,textarea:focus{border-color:var(--teal);outline:none;box-shadow:0 0 0 2px var(--teal-soft)}
+textarea{width:100%;line-height:1.7;resize:vertical}
+a{color:var(--teal)}
+
+/* ── 登入 ───────────────────────────────────────────── */
+.login{max-width:400px;margin:14vh auto;padding:0 18px}
+.login .card{margin:0}
+.login h1{font-size:19px}
+.login .sub{margin:4px 0 0;color:var(--ink-2);font-size:13px}
+.login .f{margin-bottom:12px}
+.login label{display:block;font-size:10.5px;letter-spacing:.14em;color:var(--ink-3);text-transform:uppercase;font-weight:700;margin-bottom:3px}
+.login input{width:100%}
+.login .msg{min-height:20px;font-size:13px;color:var(--alert);margin-top:10px}
+.login .foot{font-size:12px;color:var(--ink-3);margin-top:14px;line-height:1.7}
+
+/* ── 版面 ───────────────────────────────────────────── */
+.masthead{border-top:3px solid var(--ink);padding-top:13px;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;justify-content:space-between}
+.masthead h1{font-size:22px}
+.masthead .sub{margin:3px 0 0;color:var(--ink-2);font-size:13px}
+.mast-right{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--ink-2)}
+.verbadge{font-family:var(--font-mono);font-size:11.5px;letter-spacing:.06em;color:var(--teal);
+  border:1px solid var(--teal);background:var(--teal-soft);padding:1px 7px;border-radius:2px;font-weight:600}
+
+.tabs{display:flex;flex-wrap:wrap;gap:1px;border-bottom:1px solid var(--rule);margin-bottom:16px}
+.tabs button{border:1px solid transparent;border-bottom:none;background:none;color:var(--ink-2);
+  padding:8px 14px;font-size:13.5px;border-radius:2px 2px 0 0;margin-bottom:-1px}
+.tabs button:hover{color:var(--teal)}
+.tabs button.on{background:var(--surface);border-color:var(--rule);color:var(--ink);font-weight:700}
+
+.bar{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-bottom:16px;font-size:13px;color:var(--ink-2)}
+/* 踩過的坑第 6 條：任何 class 的 display 都會蓋過瀏覽器預設的 [hidden]{display:none}，
+   所以設了 display:flex 的東西要自己把 [hidden] 補回來 */
+.bar[hidden]{display:none}
+.bar .sp{flex:1}
+.bar select{height:32px}
+
+.card{background:var(--surface);border:1px solid var(--rule);margin-bottom:18px}
+.card>header{padding:12px 15px;border-bottom:1px solid var(--rule-soft);display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between}
+.card>header h2{font-size:16px}
+.card>header .hint{font-size:12.5px;color:var(--ink-2);flex:1 1 200px}
+.card .body{padding:14px 15px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:900px){.cols{grid-template-columns:1fr}}
+
+/* ── 數字磚 ─────────────────────────────────────────── */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1px;background:var(--rule-soft);border:1px solid var(--rule);margin-bottom:18px}
+.tile{background:var(--surface);padding:13px 15px}
+.tile .k{font-size:10.5px;letter-spacing:.14em;color:var(--ink-3);text-transform:uppercase;font-weight:700}
+.tile .v{font-size:27px;line-height:1.25;margin-top:4px;font-weight:600}
+.tile .n{font-size:12px;color:var(--ink-2);margin-top:1px}
+.tile.flag .v{color:var(--alert)}
+.tile.ok .v{color:var(--teal)}
+
+/* ── 表格 ───────────────────────────────────────────── */
+table.grid{width:100%;border-collapse:collapse;font-size:13.5px}
+table.grid th{text-align:left;font-size:10.5px;letter-spacing:.12em;color:var(--ink-3);font-weight:700;padding:6px;border-bottom:1px solid var(--rule);white-space:nowrap}
+table.grid td{padding:6px;border-bottom:1px solid var(--rule-soft);vertical-align:top}
+table.grid tbody tr:hover{background:#f6f9fa}
+table.grid td.num,table.grid th.num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--font-mono);font-size:12.5px}
+table.grid td.nowrap{white-space:nowrap}
+table.grid tr.sel{background:var(--teal-soft)}
+table.grid tr.clickable{cursor:pointer}
+.scroll{overflow-x:auto}
+.tblwrap{max-height:420px;overflow:auto}
+.empty{color:var(--ink-3);font-size:13px;padding:18px 2px}
+
+.chip{display:inline-block;font-size:11.5px;padding:1px 7px;border:1px solid var(--rule);border-radius:2px;background:#f6f9fa;color:var(--ink-2);white-space:nowrap}
+.chip.wait{border-color:var(--warn);background:var(--warn-soft);color:var(--warn)}
+.chip.doing{border-color:var(--teal);background:var(--teal-soft);color:var(--teal)}
+.chip.done{border-color:#0a7a3d;background:#e3f3ea;color:#0a6a35}
+.chip.no{border-color:var(--rule);background:#f1f4f5;color:var(--ink-3)}
+.chip.bad{border-color:var(--alert);background:var(--alert-soft);color:var(--alert)}
+.mono{font-family:var(--font-mono);font-size:12.5px}
+.tiny{font-size:12px;color:var(--ink-3)}
+
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:1px}
+.dot.ok{background:var(--good)} .dot.warn{background:var(--warning)} .dot.bad{background:var(--critical)}
+
+/* ── 圖表 ───────────────────────────────────────────── */
+.chart{position:relative}
+.chart svg{display:block;width:100%}
+.legend{display:flex;flex-wrap:wrap;gap:4px 15px;margin:9px 0 0;font-size:12.5px;color:var(--ink-2)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:0}
+details.tbl{margin-top:10px;border-top:1px solid var(--rule-soft);padding-top:8px}
+details.tbl>summary{cursor:pointer;font-size:12.5px;color:var(--teal);list-style:none}
+details.tbl>summary::-webkit-details-marker{display:none}
+details.tbl>summary::before{content:"▸ "}
+details.tbl[open]>summary::before{content:"▾ "}
+#tip{position:fixed;z-index:60;pointer-events:none;background:#fff;border:1px solid var(--rule);
+  box-shadow:0 3px 12px rgba(21,32,42,.13);padding:7px 10px;font-size:12.5px;line-height:1.6;display:none;max-width:240px}
+#tip b{display:block;margin-bottom:2px}
+#tip .r{display:flex;justify-content:space-between;gap:14px}
+#tip .r i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px}
+
+/* ── 明細 ───────────────────────────────────────────── */
+.detail{border:1px solid var(--rule);background:#fbfcfd;padding:13px 14px}
+.detail .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:13px;margin-bottom:11px}
+.detail .kv dt{color:var(--ink-3);font-size:11.5px;letter-spacing:.08em;font-weight:700;text-transform:uppercase;padding-top:2px}
+.detail .kv dd{margin:0}
+.detail .quote{border-left:3px solid var(--rule);padding:2px 0 2px 12px;white-space:pre-wrap;margin:0 0 12px;font-size:13.5px}
+.detail .row{display:flex;flex-wrap:wrap;gap:9px;align-items:flex-end;margin-top:10px}
+.detail .f{display:flex;flex-direction:column;gap:3px}
+.detail .f label{font-size:10.5px;letter-spacing:.14em;color:var(--ink-3);text-transform:uppercase;font-weight:700}
+pre.md{white-space:pre-wrap;font-family:var(--font-mono);font-size:12px;line-height:1.65;background:#fbfcfd;
+  border:1px solid var(--rule-soft);padding:12px;max-height:460px;overflow:auto;margin:0}
+.msgline{font-size:13px;color:var(--ink-2);min-height:20px}
+.msgline.bad{color:var(--alert)}
+.msgline.ok{color:var(--teal)}
+#toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(14px);background:var(--ink);color:#fff;
+  padding:9px 17px;font-size:13.5px;border-radius:2px;opacity:0;transition:.18s;pointer-events:none;z-index:80}
+#toast.show{opacity:1;transform:translateX(-50%)}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ 登入 ══════════════ -->
+<div class="login" id="login">
+  <div class="card">
+    <header><div><h1>JourneyForge 後台</h1><p class="sub">使用狀況、回饋處理與系統健康</p></div></header>
+    <div class="body">
+      <div class="f"><label for="lgUser">帳號</label><input id="lgUser" autocomplete="username"></div>
+      <div class="f"><label for="lgPass">密碼</label><input id="lgPass" type="password" autocomplete="current-password"></div>
+      <button class="btn btn-primary" id="lgGo" style="width:100%;padding:9px">登入</button>
+      <div class="msg" id="lgMsg"></div>
+      <p class="foot">後台走的是獨立帳密，跟同事在工具裡填的通行碼不是同一組。<br>
+        還沒設定的話，到 Apps Script 編輯器執行一次 <span class="mono">setAdmin('帳號','密碼')</span>。</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ 主體 ══════════════ -->
+<div class="wrap" id="app" hidden>
+  <div class="masthead">
+    <div>
+      <h1>JourneyForge 後台</h1>
+      <p class="sub" id="subline">使用狀況、回饋處理與系統健康</p>
+    </div>
+    <div class="mast-right">
+      <span class="verbadge" id="verBadge">後台 —</span>
+      <span id="whoami" class="tiny"></span>
+      <button class="btn btn-sm" id="btnLogout">登出</button>
+    </div>
+  </div>
+
+  <nav class="tabs" id="tabs"></nav>
+
+  <div class="bar" id="rangeBar">
+    <label for="rangeSel">統計期間</label>
+    <select id="rangeSel">
+      <option value="7">最近 7 天</option>
+      <option value="30" selected>最近 30 天</option>
+      <option value="90">最近 90 天</option>
+      <option value="365">最近一年</option>
+    </select>
+    <button class="btn btn-sm" id="btnReload">重新整理</button>
+    <span class="sp"></span>
+    <span class="tiny" id="lastSync"></span>
+  </div>
+
+  <section class="panel" id="p-overview"></section>
+  <section class="panel" id="p-usage" hidden></section>
+  <section class="panel" id="p-feedback" hidden></section>
+  <section class="panel" id="p-cases" hidden></section>
+  <section class="panel" id="p-health" hidden></section>
+  <section class="panel" id="p-cost" hidden></section>
+  <section class="panel" id="p-ops" hidden></section>
+</div>
+
+<div id="tip"></div>
+<div id="toast"></div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════
+   管理者設定：Apps Script 的 /exec 網址。跟 index.html 的 DEFAULT_GAS_URL
+   是同一個，重新部署換網址時兩邊都要改。
+   ══════════════════════════════════════════════════════════════════════ */
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxi0dsBsdvcepQo7WS-h7UvC2Sr8VEepL5BR9uv6PdofsKyA8Gt13Cpjy5_34W8Gip6/exec";
+
+/* 後台自己的版本號，跟工具的 APP_VERSION 各走各的 */
+const ADMIN_VERSION = "26.03";
+
+const $  = id => document.getElementById(id);
+const el = (tag, cls, html) => { const n=document.createElement(tag); if(cls) n.className=cls;
+                                 if(html!=null) n.innerHTML=html; return n; };
+const esc = s => String(s==null?"":s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const nf  = n => (Number(n)||0).toLocaleString("en-US");
+
+let TOKEN = sessionStorage.getItem("jf_admin_tk") || "";
+let WHO   = sessionStorage.getItem("jf_admin_who") || "";
+let RANGE = 30;
+const D = {};          /* 各分頁抓回來的資料，切分頁不重抓 */
+
+let tt; function toast(m){ const t=$("toast"); t.textContent=m; t.classList.add("show");
+  clearTimeout(tt); tt=setTimeout(()=>t.classList.remove("show"),2400); }
+
+/* ══════════════ 後端介接 ══════════════ */
+async function api(action, payload){
+  const res = await fetch(GAS_URL, {
+    method:"POST",
+    headers:{"Content-Type":"text/plain;charset=utf-8"},   /* 避開 CORS 預檢 */
+    body:JSON.stringify(Object.assign({action, token:TOKEN}, payload||{}))
+  });
+  const j = await res.json();
+  if(!j.ok){
+    if(/登入已逾期/.test(j.error||"")) { signOut(true); }
+    throw new Error(j.error||"服務回應異常");
+  }
+  return j.data;
+}
+
+/* ══════════════ 登入 ══════════════ */
+async function doLogin(){
+  const btn=$("lgGo"), msg=$("lgMsg");
+  const user=$("lgUser").value.trim(), pass=$("lgPass").value;
+  if(!user||!pass){ msg.textContent="帳號密碼都要填"; return; }
+  btn.disabled=true; btn.textContent="登入中…"; msg.textContent="";
+  try{
+    const r = await (await fetch(GAS_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body:JSON.stringify({action:"adminLogin",user,pass})})).json();
+    if(!r.ok) throw new Error(r.error||"登入失敗");
+    TOKEN=r.data.token; WHO=r.data.user;
+    sessionStorage.setItem("jf_admin_tk",TOKEN);
+    sessionStorage.setItem("jf_admin_who",WHO);
+    $("lgPass").value="";
+    enter();
+  }catch(e){ msg.textContent=e.message; }
+  finally{ btn.disabled=false; btn.textContent="登入"; }
+}
+function signOut(expired){
+  if(TOKEN && !expired) api("adminLogout").catch(()=>{});
+  TOKEN=""; WHO="";
+  sessionStorage.removeItem("jf_admin_tk"); sessionStorage.removeItem("jf_admin_who");
+  $("app").hidden=true; $("login").style.display="";
+  $("lgMsg").textContent = expired ? "登入已逾期，請重新登入" : "";
+}
+function enter(){
+  $("login").style.display="none";
+  $("app").hidden=false;
+  $("whoami").textContent=WHO;
+  $("verBadge").textContent="後台 v"+ADMIN_VERSION;
+  go(TABS[0].id);
+}
+
+/* ══════════════ 分頁 ══════════════ */
+const TABS=[
+  {id:"overview", name:"總覽",        load:loadOverview, range:true},
+  {id:"usage",    name:"使用分析",    load:loadUsage,    range:true},
+  {id:"feedback", name:"回饋管理",    load:loadFeedback},
+  {id:"cases",    name:"案件瀏覽",    load:loadCases},
+  {id:"health",   name:"錯誤與健康",  load:loadHealth,   range:true},
+  {id:"cost",     name:"成本與配額",  load:loadCost,     range:true},
+  {id:"ops",      name:"資料維運",    load:loadOps}
+];
+let CUR="overview";
+function buildTabs(){
+  const n=$("tabs"); n.innerHTML="";
+  TABS.forEach(t=>{ const b=el("button",null,esc(t.name)); b.onclick=()=>go(t.id); b.dataset.id=t.id; n.appendChild(b); });
+}
+async function go(id, force){
+  CUR=id;
+  [...$("tabs").children].forEach(b=>b.classList.toggle("on", b.dataset.id===id));
+  TABS.forEach(t=>{ $("p-"+t.id).hidden = t.id!==id; });
+  const t=TABS.find(x=>x.id===id);
+  const host=$("p-"+id);
+  $("rangeBar").hidden = !t.range;      /* 期間選擇只在吃得到它的分頁出現 */
+  if(force || !host.dataset.done){
+    host.innerHTML='<div class="card"><div class="body"><span class="tiny">讀取中…</span></div></div>';
+    try{ await t.load(); host.dataset.done="1"; stamp(); }
+    catch(e){ host.innerHTML='<div class="card"><div class="body"><span class="msgline bad">讀不到資料：'+esc(e.message)+'</span></div></div>'; }
+  }
+}
+function stamp(){ $("lastSync").textContent="更新於 "+new Date().toLocaleTimeString("zh-TW",{hour12:false}); }
+function invalidate(){
+  TABS.forEach(t=>{ delete $("p-"+t.id).dataset.done; });
+  delete D.ov; delete D.cost; delete D.fb; delete D.cs; delete D.er;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   圖表：手刻 SVG，沒有任何外部相依。
+   類別色固定順序不循環；每個圖都附一份表格版本，顏色從來不是唯一的線索。
+   ══════════════════════════════════════════════════════════════════════ */
+const SER = ["--s1","--s2","--s3","--s4","--s5"];
+const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const palette = i => cssv(SER[i % SER.length]);
+
+function tipShow(e, html){
+  const t=$("tip"); t.innerHTML=html; t.style.display="block";
+  const r=t.getBoundingClientRect();
+  let x=e.clientX+14, y=e.clientY+14;
+  if(x+r.width  > innerWidth -8) x=e.clientX-r.width -14;
+  if(y+r.height > innerHeight-8) y=e.clientY-r.height-14;
+  t.style.left=x+"px"; t.style.top=y+"px";
+}
+const tipHide = () => { $("tip").style.display="none"; };
+
+/** 堆疊直條圖。rows:[{label, tip, parts:[v,...]}]，series:[名稱,...] */
+function colChart(host, rows, series, opt){
+  opt = opt||{};
+  const W = Math.max(320, host.clientWidth||640), H = opt.height||210;
+  const padL=38, padR=6, padT=10, padB=26;
+  const iw=W-padL-padR, ih=H-padT-padB;
+  const totals = rows.map(r=>r.parts.reduce((a,b)=>a+(b||0),0));
+  const max = Math.max(1, ...totals);
+  const step = niceStep(max), top = Math.ceil(max/step)*step;
+  const bw = Math.max(2, Math.min(30, iw/Math.max(1,rows.length)-2));
+  const gap = rows.length ? iw/rows.length : iw;
+
+  let g = '';
+  /* 網格與刻度：灰階、細線，永遠退到資料後面 */
+  for(let v=0; v<=top+0.001; v+=step){
+    const y = padT+ih-(v/top)*ih;
+    g += `<line x1="${padL}" x2="${W-padR}" y1="${y}" y2="${y}" stroke="${cssv("--grid")}" stroke-width="1"/>`;
+    g += `<text x="${padL-6}" y="${y+4}" text-anchor="end" font-size="10.5" fill="${cssv("--ink-3")}" font-family="${cssv("--font-mono")}">${v}</text>`;
+  }
+  rows.forEach((r,i)=>{
+    const x = padL + i*gap + (gap-bw)/2;
+    let acc = 0;
+    r.parts.forEach((v,si)=>{
+      if(!v) return;
+      const h = (v/top)*ih;
+      const y = padT+ih-acc-h;
+      acc += h;
+      /* 段與段之間留 2px 底色縫，堆疊才分得開 */
+      g += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0.5,h-2).toFixed(1)}"
+              fill="${palette(si)}" data-i="${i}"><title></title></rect>`;
+    });
+    g += `<rect x="${(padL+i*gap).toFixed(1)}" y="${padT}" width="${gap.toFixed(1)}" height="${ih}" fill="transparent"
+             class="hit" data-i="${i}" style="cursor:default"/>`;
+  });
+  /* x 軸標籤挑著放，密了就跳號 */
+  const every = Math.ceil(rows.length/ (W>760?12:6));
+  rows.forEach((r,i)=>{
+    if(i % every) return;
+    const x = padL + i*gap + gap/2;
+    g += `<text x="${x.toFixed(1)}" y="${H-8}" text-anchor="middle" font-size="10.5" fill="${cssv("--ink-3")}">${esc(r.label)}</text>`;
+  });
+  g += `<line x1="${padL}" x2="${W-padR}" y1="${padT+ih}" y2="${padT+ih}" stroke="${cssv("--axis")}" stroke-width="1"/>`;
+
+  host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(opt.aria||"直條圖")}">${g}</svg>`;
+  host.querySelectorAll(".hit").forEach(n=>{
+    n.addEventListener("mousemove", e=>{
+      const r = rows[+n.dataset.i];
+      let html = "<b>"+esc(r.tip||r.label)+"</b>";
+      let any=false;
+      r.parts.forEach((v,si)=>{ if(!v) return; any=true;
+        html += `<div class="r"><span><i style="background:${palette(si)}"></i>${esc(series[si])}</span><b style="display:inline;font-weight:600">${nf(v)}</b></div>`; });
+      if(!any) html += '<div class="r"><span>沒有紀錄</span></div>';
+      else if(series.length>1) html += `<div class="r" style="border-top:1px solid var(--rule-soft);margin-top:4px;padding-top:3px"><span>合計</span><b style="display:inline">${nf(r.parts.reduce((a,b)=>a+b,0))}</b></div>`;
+      tipShow(e, html);
+    });
+    n.addEventListener("mouseleave", tipHide);
+  });
+}
+/* 刻度取整。這裡的量都是「次數」，所以最小刻度鎖在 1，不要出現 0.5 次 */
+function niceStep(max){
+  const raw = max/4, p = Math.pow(10, Math.floor(Math.log10(raw||1)));
+  const n = raw/p;
+  const m = n<=1 ? 1 : n<=2 ? 2 : n<=5 ? 5 : 10;
+  return Math.max(1, Math.round(m*p));
+}
+
+/** 橫條圖，直接把數值標在條子旁邊（顏色對比不足時的補救就是它） */
+function barList(host, items, opt){
+  opt=opt||{};
+  const max=Math.max(1,...items.map(i=>i.v));
+  const t=el("table","grid");
+  t.innerHTML="<tbody>"+items.map((it,i)=>{
+    const w=Math.max(1,(it.v/max)*100);
+    const c=it.color||palette(opt.mono?0:i);
+    return `<tr><td class="nowrap" style="width:1%">${esc(it.label)}</td>
+      <td><div style="display:flex;align-items:center;gap:8px">
+        <span style="display:block;height:11px;border-radius:0 2px 2px 0;background:${c};width:${w}%;min-width:2px"></span>
+        <span class="mono" style="color:var(--ink-2)">${esc(opt.fmt?opt.fmt(it.v):nf(it.v))}</span>
+        ${it.note?'<span class="tiny">'+esc(it.note)+'</span>':''}
+      </div></td></tr>`;
+  }).join("")+"</tbody>";
+  host.innerHTML=""; host.appendChild(t);
+}
+
+function legend(series, host){
+  host.innerHTML = series.map((s,i)=>`<span><i style="background:${palette(i)}"></i>${esc(s)}</span>`).join("");
+}
+/** 每個圖都配一份表格：顏色看不出來時，這裡看得出來 */
+function tableFor(rows, series){
+  return `<details class="tbl"><summary>表格檢視</summary><div class="scroll" style="margin-top:8px"><table class="grid">
+    <thead><tr><th>日期</th>${series.map(s=>'<th class="num">'+esc(s)+'</th>').join("")}<th class="num">合計</th></tr></thead>
+    <tbody>${rows.filter(r=>r.parts.some(v=>v)).map(r=>'<tr><td class="nowrap">'+esc(r.tip||r.label)+'</td>'+
+      r.parts.map(v=>'<td class="num">'+(v?nf(v):"—")+'</td>').join("")+
+      '<td class="num">'+nf(r.parts.reduce((a,b)=>a+b,0))+'</td></tr>').join("")||
+      '<tr><td colspan="'+(series.length+2)+'" class="empty">期間內沒有紀錄</td></tr>'}</tbody></table></div></details>`;
+}
+
+/* 視窗寬度變了要重畫，SVG 是照實際像素寬度算的。
+   只重畫、不重抓：重抓會多打一次後端，也會把使用者正在看的明細清掉。 */
+const REDRAW={ overview:()=>D.ov&&renderOverview(), usage:()=>D.ov&&renderUsage(), cost:()=>D.cost&&renderCost() };
+let rz, lastW=innerWidth;
+addEventListener("resize", ()=>{
+  if(innerWidth===lastW) return;            /* 只有寬度變了才有意義 */
+  lastW=innerWidth;
+  clearTimeout(rz); rz=setTimeout(()=>{ const f=REDRAW[CUR]; if(f) f(); },260);
+});
+
+/* ══════════════════════════════════════════════════════════════════════
+   1 · 總覽　2 · 使用分析　（同一支 adminOverview 供兩頁用）
+   ══════════════════════════════════════════════════════════════════════ */
+const ACTS=["規劃行程","產生Word","列印","儲存案件","開啟案件"];
+
+async function ov(){ if(!D.ov) D.ov = await api("adminOverview",{days:RANGE}); return D.ov; }
+/* 兩頁共用同一份資料，但各自在自己可見的時候才畫——
+   SVG 是照 host.clientWidth 算的，分頁還 hidden 時量到 0，圖會縮成一條置中。 */
+async function loadOverview(){ await ov(); renderOverview(); }
+async function loadUsage(){ await ov(); renderUsage(); }
+
+function ovSeries(){
+  const s=D.ov.series;
+  const extra=[];
+  s.forEach(d=>Object.keys(d.v).forEach(k=>{ if(ACTS.indexOf(k)<0 && extra.indexOf(k)<0) extra.push(k); }));
+  const series=ACTS.concat(extra.length?["其他"]:[]);
+  const rows=s.map(d=>({
+    label:d.d.slice(5).replace("-","/"), tip:d.d,
+    parts:series.map(k=> k==="其他"
+      ? extra.reduce((a,x)=>a+(d.v[x]||0),0)
+      : (d.v[k]||0))
+  }));
+  return {series, rows};
+}
+
+function renderOverview(){
+  const k=D.ov.kpi, host=$("p-overview");
+  host.innerHTML="";
+
+  const tiles=el("div","tiles");
+  [["期間內規劃次數",nf(k.plans),"共 "+nf(k.total)+" 次操作"],
+   ["產出份數",nf(k.outputs),"產生 Word ＋ 列印"],
+   ["活躍使用者",nf(k.users),"期間內有動作的人"],
+   ["新增案件",nf(k.caseNew),"累計 "+nf(k.caseTotal)+" 件"],
+   ["待處理回饋",nf(k.fbOpen),"期間內新收 "+nf(k.fbNew)+" 筆", k.fbOpen?"flag":""],
+   ["近 7 日錯誤",nf(k.err7),"未處理 "+nf(k.errOpen)+" 筆", k.err7?"flag":"ok"]
+  ].forEach(([a,b,c,cls])=>{
+    tiles.appendChild(el("div","tile "+(cls||""),
+      `<div class="k">${esc(a)}</div><div class="v">${b}</div><div class="n">${esc(c)}</div>`));
+  });
+  host.appendChild(tiles);
+
+  /* 每日活動 */
+  const {series, rows} = ovSeries();
+  const c1=el("div","card");
+  c1.appendChild(el("header",null,`<h2>每日活動</h2><span class="hint">${esc(D.ov.from)} 至 ${esc(D.ov.to)}，依動作堆疊。滑過任一天看細目。</span>`));
+  const b1=el("div","body");
+  const ch=el("div","chart"); b1.appendChild(ch);
+  const lg=el("div","legend"); b1.appendChild(lg);
+  b1.insertAdjacentHTML("beforeend", tableFor(rows, series));
+  c1.appendChild(b1); host.appendChild(c1);
+  colChart(ch, rows, series, {height:220, aria:"每日活動堆疊直條圖"});
+  legend(series, lg);
+
+  /* 動作分布＋行程規模 */
+  const two=el("div","cols");
+
+  const c2=el("div","card");
+  c2.appendChild(el("header",null,'<h2>動作分布</h2><span class="hint">期間內每種動作各幾次</span>'));
+  const b2=el("div","body"); const bl=el("div"); b2.appendChild(bl); c2.appendChild(b2);
+  two.appendChild(c2);
+
+  const c3=el("div","card");
+  c3.appendChild(el("header",null,'<h2>行程規模</h2><span class="hint">只看「規劃行程」這個動作帶回來的天數與站數</span>'));
+  c3.appendChild(el("div","body",`
+    <dl class="kv" style="display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:13.5px;margin:0">
+      <dt class="tiny">平均天數</dt><dd class="mono">${k.avgDays} 天</dd>
+      <dt class="tiny">平均站數</dt><dd class="mono">${k.avgStops} 站</dd>
+      <dt class="tiny">單次最多</dt><dd class="mono">${k.maxStops} 站</dd>
+      <dt class="tiny">回饋滿意度</dt><dd class="mono">${k.rate? k.rate+" / 5（"+k.rateN+" 筆）" : "還沒有評分"}</dd>
+    </dl>
+    <p class="tiny" style="margin:12px 0 0">「平均停留時間」這類需要開始與結束時間的指標，使用紀錄目前記不出來——它記的是離散動作，不是連續的一段使用。要做的話得另外埋 session 起訖點。</p>`));
+  two.appendChild(c3);
+  host.appendChild(two);
+
+  /* 顏色跟著「動作」這個實體走，不跟著排名走——這裡排序是照次數，
+     若用序號取色，資料一變同一個動作就換顏色，跟上面那張圖也對不起來 */
+  barList(bl, D.ov.acts.map(a=>{
+    const i=ACTS.indexOf(a.act);
+    return {label:a.act, v:a.n, color:i<0?cssv("--ink-3"):palette(i)};
+  }));
+
+  /* 近期動態 */
+  const c4=el("div","card");
+  c4.appendChild(el("header",null,'<h2>近期動態</h2><span class="hint">最新 40 筆</span>'));
+  const b4=el("div","body");
+  b4.innerHTML = D.ov.recent.length ? `<div class="tblwrap"><table class="grid">
+    <thead><tr><th>時間</th><th>使用者</th><th>動作</th><th>標題</th><th class="num">天/站</th><th>案件</th></tr></thead>
+    <tbody>${D.ov.recent.map(r=>`<tr><td class="nowrap mono">${esc(r.time)}</td><td class="nowrap">${esc(r.user)}</td>
+      <td class="nowrap"><span class="chip">${esc(r.act)}</span></td><td>${esc(r.title)}</td>
+      <td class="num">${r.days||"—"} / ${r.stops||"—"}</td>
+      <td class="nowrap mono">${r.id?`<a href="index.html?case=${encodeURIComponent(r.id)}" target="_blank" rel="noopener">${esc(r.id)}</a>`:"—"}</td></tr>`).join("")}
+    </tbody></table></div>` : '<div class="empty">這段期間沒有任何使用紀錄。</div>';
+  c4.appendChild(b4); host.appendChild(c4);
+}
+
+function renderUsage(){
+  const host=$("p-usage"); host.innerHTML="";
+  const u=D.ov.users;
+
+  const c1=el("div","card");
+  c1.appendChild(el("header",null,'<h2>依使用者</h2><span class="hint">規劃次數、產出份數、經手案件與最後一次使用</span>'));
+  c1.appendChild(el("div","body", u.length ? `<div class="scroll"><table class="grid">
+    <thead><tr><th>使用者</th><th class="num">規劃</th><th class="num">產出</th><th class="num">案件</th><th>最後使用</th><th style="width:38%">相對活躍度</th></tr></thead>
+    <tbody>${u.map(x=>{
+      const max=Math.max(1,...u.map(y=>y.runs+y.outputs));
+      const w=((x.runs+x.outputs)/max*100).toFixed(1);
+      return `<tr><td class="nowrap">${esc(x.user)}</td><td class="num">${nf(x.runs)}</td>
+        <td class="num">${nf(x.outputs)}</td><td class="num">${nf(x.cases)}</td>
+        <td class="nowrap mono">${esc(x.last)}</td>
+        <td><span style="display:block;height:10px;background:${palette(0)};width:${w}%;min-width:2px"></span></td></tr>`;
+    }).join("")}</tbody></table></div>` : '<div class="empty">這段期間沒有人使用。</div>'));
+  host.appendChild(c1);
+
+  const two=el("div","cols");
+  const c2=el("div","card");
+  c2.appendChild(el("header",null,'<h2>星期分布</h2><span class="hint">看行程規劃集中在哪幾天</span>'));
+  const b2=el("div","body"); const h2=el("div"); b2.appendChild(h2); c2.appendChild(b2); two.appendChild(c2);
+
+  const c3=el("div","card");
+  c3.appendChild(el("header",null,'<h2>時段分布</h2><span class="hint">以台北時間計</span>'));
+  const b3=el("div","body"); const h3=el("div","chart"); b3.appendChild(h3); c3.appendChild(b3); two.appendChild(c3);
+  host.appendChild(two);
+
+  const WK=["日","一","二","三","四","五","六"];
+  barList(h2, D.ov.dow.map((v,i)=>({label:"週"+WK[i], v:v})), {mono:true});
+  colChart(h3, D.ov.hour.map((v,i)=>({label:String(i), tip:i+":00–"+i+":59", parts:[v]})),
+           ["操作次數"], {height:170, aria:"時段分布直條圖"});
+
+  const c4=el("div","card");
+  c4.appendChild(el("header",null,'<h2>每日活動（同總覽）</h2><span class="hint">留在這裡是為了跟上面兩張圖對照</span>'));
+  const b4=el("div","body"); const h4=el("div","chart"); b4.appendChild(h4);
+  const lg=el("div","legend"); b4.appendChild(lg); c4.appendChild(b4); host.appendChild(c4);
+  const {series, rows}=ovSeries();
+  colChart(h4, rows, series, {height:200, aria:"每日活動堆疊直條圖"});
+  legend(series, lg);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   3 · 回饋管理
+   ══════════════════════════════════════════════════════════════════════ */
+const FB_STATUS=["待處理","處理中","已排入","已上線","已驗收","不採納"];
+const FB_CATS=["介面設計","輸出文件","排程與車次","資料及效能","許願池","其他"];
+const chipCls = s => s==="待處理"?"wait" : s==="處理中"||s==="已排入"?"doing"
+                  : s==="已上線"||s==="已驗收"?"done" : s==="不採納"?"no":"";
+
+async function loadFeedback(){
+  const f=D.fbFilter||{status:"全部",cat:"全部",q:""};
+  D.fbFilter=f;
+  D.fb = await api("adminFeedback",{status:f.status,cat:f.cat,q:f.q});
+  renderFeedback();
+}
+function renderFeedback(){
+  const host=$("p-feedback"); host.innerHTML="";
+  const f=D.fbFilter, list=D.fb.list;
+
+  /* 狀態摘要 */
+  const tiles=el("div","tiles");
+  const stat=D.ov?D.ov.fbStat:{};
+  const counts={}; list.forEach(x=>counts[x.status]=(counts[x.status]||0)+1);
+  const all=Object.assign({},stat);
+  [["待處理",all["待處理"]||0],["處理中",all["處理中"]||0],
+   ["已上線",(all["已上線"]||0)+(all["已驗收"]||0)],["不採納",all["不採納"]||0]]
+   .forEach(([a,b])=>tiles.appendChild(el("div","tile "+(a==="待處理"&&b?"flag":""),
+      `<div class="k">${esc(a)}</div><div class="v">${nf(b)}</div><div class="n">全部期間</div>`)));
+  host.appendChild(tiles);
+
+  const card=el("div","card");
+  card.appendChild(el("header",null,`<h2>回饋清單</h2>
+    <span class="hint">共 ${list.length} 筆。點一列開啟明細，改完狀態直接寫回試算表。</span>`));
+  const body=el("div","body");
+
+  const bar=el("div","bar");
+  bar.innerHTML=`
+    <label for="fbStatus">狀態</label>
+    <select id="fbStatus">${["全部"].concat(FB_STATUS).map(s=>`<option${s===f.status?" selected":""}>${s}</option>`).join("")}</select>
+    <label for="fbCat">分類</label>
+    <select id="fbCat">${["全部"].concat(FB_CATS).map(s=>`<option${s===f.cat?" selected":""}>${s}</option>`).join("")}</select>
+    <input id="fbQ" placeholder="搜尋內容或使用者" value="${esc(f.q)}" style="width:200px">
+    <button class="btn btn-sm" id="fbGo">篩選</button>
+    <span class="sp"></span>
+    <button class="btn btn-sm" id="fbMd">匯出 FEEDBACK.md 片段</button>`;
+  body.appendChild(bar);
+
+  const tw=el("div","tblwrap");
+  tw.innerHTML = list.length ? `<table class="grid">
+    <thead><tr><th>編號</th><th>時間</th><th>使用者</th><th>分類</th><th class="num">滿意度</th><th>摘要</th><th>狀態</th><th>追蹤</th></tr></thead>
+    <tbody>${list.map(r=>`<tr class="clickable" data-id="${esc(r.id)}">
+      <td class="nowrap mono">${esc(r.id)}</td><td class="nowrap mono">${esc(r.time)}</td>
+      <td class="nowrap">${esc(r.user)||'<span class="tiny">未填</span>'}</td>
+      <td class="nowrap">${esc(r.cat)}</td><td class="num">${esc(r.rate)||"—"}</td>
+      <td>${esc(r.text.slice(0,46))}${r.text.length>46?"…":""}${r.files?' <span class="chip">附件</span>':""}</td>
+      <td class="nowrap"><span class="chip ${chipCls(r.status)}">${esc(r.status)}</span></td>
+      <td class="nowrap mono">${esc(r.track)||"—"}</td></tr>`).join("")}</tbody></table>`
+    : '<div class="empty">沒有符合條件的回饋。</div>';
+  body.appendChild(tw);
+
+  const det=el("div"); det.id="fbDetail"; det.style.marginTop="14px";
+  body.appendChild(det);
+  card.appendChild(body); host.appendChild(card);
+
+  $("fbGo").onclick=()=>{ D.fbFilter={status:$("fbStatus").value,cat:$("fbCat").value,q:$("fbQ").value.trim()};
+                          go("feedback",true); };
+  $("fbQ").addEventListener("keydown",e=>{ if(e.key==="Enter") $("fbGo").click(); });
+  $("fbMd").onclick=exportFeedbackMd;
+  tw.querySelectorAll("tr.clickable").forEach(tr=>tr.onclick=()=>{
+    tw.querySelectorAll("tr").forEach(x=>x.classList.remove("sel"));
+    tr.classList.add("sel"); showFb(tr.dataset.id);
+  });
+}
+function showFb(id){
+  const r=D.fb.list.find(x=>x.id===id); if(!r) return;
+  const files=r.files? r.files.split("\n").filter(Boolean) : [];
+  const d=el("div","detail");
+  d.innerHTML=`
+    <dl class="kv">
+      <dt>收件編號</dt><dd class="mono">${esc(r.id)}</dd>
+      <dt>時間</dt><dd class="mono">${esc(r.time)}</dd>
+      <dt>使用者</dt><dd>${esc(r.user)||"（未填）"}</dd>
+      <dt>版本</dt><dd class="mono">${esc(r.app)}</dd>
+      <dt>分類</dt><dd>${esc(r.cat)}　滿意度 ${esc(r.rate)||"未評"}</dd>
+      ${files.length?`<dt>附件</dt><dd>${files.map((u,i)=>/^https?:/.test(u)?`<a href="${esc(u)}" target="_blank" rel="noopener">截圖 ${i+1}</a>`:esc(u)).join("　")}</dd>`:""}
+      ${r.env?`<dt>環境</dt><dd class="tiny mono" style="word-break:break-all">${esc(r.env)}</dd>`:""}
+      ${r.by?`<dt>上次處理</dt><dd class="tiny">${esc(r.by)}　${esc(r.at)}</dd>`:""}
+    </dl>
+    <p class="quote">${esc(r.text)}</p>
+    <div class="row">
+      <div class="f"><label>狀態</label>
+        <select id="fbS">${FB_STATUS.map(s=>`<option${s===r.status?" selected":""}>${s}</option>`).join("")}</select></div>
+      <div class="f"><label>追蹤編號</label><input id="fbT" value="${esc(r.track)}" placeholder="FB-010" style="width:110px"></div>
+      <div class="f" style="flex:1 1 260px"><label>處理備註</label><input id="fbN" value="${esc(r.note)}" style="width:100%"></div>
+      <button class="btn btn-primary btn-sm" id="fbSave">儲存</button>
+      <span class="msgline" id="fbMsg"></span>
+    </div>
+    <p class="tiny" style="margin:10px 0 0">不採納也要留下理由寫在備註——半年後才不會有人再提一次同樣的事。</p>`;
+  const host=$("fbDetail"); host.innerHTML=""; host.appendChild(d);
+  $("fbSave").onclick=async()=>{
+    const btn=$("fbSave"), msg=$("fbMsg");
+    btn.disabled=true; msg.className="msgline"; msg.textContent="儲存中…";
+    try{
+      await api("adminFeedbackSet",{id:r.id,status:$("fbS").value,track:$("fbT").value.trim(),note:$("fbN").value});
+      Object.assign(r,{status:$("fbS").value,track:$("fbT").value.trim(),note:$("fbN").value});
+      msg.className="msgline ok"; msg.textContent="已寫回試算表";
+      toast("已更新 "+r.id);
+      renderFeedback();
+    }catch(e){ msg.className="msgline bad"; msg.textContent=e.message; }
+    finally{ btn.disabled=false; }
+  };
+}
+/** 把目前篩到的回饋整成 FEEDBACK.md 的體例，貼進去就能用 */
+function exportFeedbackMd(){
+  const list=D.fb.list;
+  if(!list.length){ toast("目前沒有可匯出的回饋"); return; }
+  let md="| 編號 | 日期 | 來源 | 分類 | 回饋摘要 | 狀態 | 版本 |\n|---|---|---|---|---|---|---|\n";
+  list.slice().reverse().forEach(r=>{
+    md += `| ${r.track||r.id} | ${r.time.slice(0,10)} | ${r.user||"使用者"} | ${r.cat} | ${r.text.replace(/\s+/g," ").slice(0,40)} | ${r.status} | ${r.app||""} |\n`;
+  });
+  md += "\n---\n\n";
+  list.slice().reverse().forEach(r=>{
+    md += `## ${r.track||r.id}　${r.text.replace(/\s+/g," ").slice(0,20)}\n\n`;
+    md += `**分類**：${r.cat}　**狀態**：${r.status}　**提出**：${r.time.slice(0,10)}　**來源**：${r.id}\n\n`;
+    md += `> ${r.text.replace(/\n/g,"\n> ")}\n\n**怎麼處理的**\n\n- ${r.note||"（待填）"}\n\n---\n\n`;
+  });
+  download("FEEDBACK-片段-"+new Date().toISOString().slice(0,10)+".md", md);
+  toast("已下載 Markdown 片段");
+}
+function download(name, text){
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([text],{type:"text/markdown;charset=utf-8"}));
+  a.download=name; document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },800);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   4 · 案件瀏覽
+   ══════════════════════════════════════════════════════════════════════ */
+async function loadCases(){
+  D.cs = await api("adminCases",{q:D.csQ||""});
+  renderCases();
+}
+function renderCases(){
+  const host=$("p-cases"); host.innerHTML="";
+  const list=D.cs.list;
+  const card=el("div","card");
+  card.appendChild(el("header",null,`<h2>案件</h2>
+    <span class="hint">共 ${list.length} 件。Markdown 欄是給人看的那一份，可以直接貼進彙整報告。</span>`));
+  const body=el("div","body");
+  const bar=el("div","bar");
+  bar.innerHTML=`<input id="csQ" placeholder="搜尋案件 ID、標題或日期" value="${esc(D.csQ||"")}" style="width:240px">
+    <button class="btn btn-sm" id="csGo">搜尋</button>
+    <span class="sp"></span><span class="tiny">點一列看內容</span>`;
+  body.appendChild(bar);
+
+  const tw=el("div","tblwrap");
+  tw.innerHTML = list.length ? `<table class="grid">
+    <thead><tr><th>案件 ID</th><th>標題</th><th>日期</th><th class="num">站數</th><th>建立</th><th>最後更新</th><th></th></tr></thead>
+    <tbody>${list.map(r=>`<tr class="clickable" data-id="${esc(r.id)}">
+      <td class="nowrap mono">${esc(r.id)}</td><td>${esc(r.title)}</td>
+      <td class="nowrap">${esc(r.dates)}</td><td class="num">${nf(r.count)}</td>
+      <td class="nowrap mono">${esc(r.created)}</td><td class="nowrap mono">${esc(r.updated)}</td>
+      <td class="nowrap"><a href="index.html?case=${encodeURIComponent(r.id)}" target="_blank" rel="noopener">開啟</a></td>
+    </tr>`).join("")}</tbody></table>` : '<div class="empty">找不到案件。</div>';
+  body.appendChild(tw);
+  const det=el("div"); det.id="csDetail"; det.style.marginTop="14px"; body.appendChild(det);
+  card.appendChild(body); host.appendChild(card);
+
+  $("csGo").onclick=()=>{ D.csQ=$("csQ").value.trim(); go("cases",true); };
+  $("csQ").addEventListener("keydown",e=>{ if(e.key==="Enter") $("csGo").click(); });
+  tw.querySelectorAll("tr.clickable").forEach(tr=>tr.onclick=e=>{
+    if(e.target.tagName==="A") return;
+    tw.querySelectorAll("tr").forEach(x=>x.classList.remove("sel"));
+    tr.classList.add("sel"); showCase(tr.dataset.id);
+  });
+}
+async function showCase(id){
+  const host=$("csDetail");
+  host.innerHTML='<div class="detail"><span class="tiny">讀取中…</span></div>';
+  try{
+    const c=await api("adminCase",{id});
+    const link=location.origin+location.pathname.replace(/admin\.html$/,"index.html")+"?case="+encodeURIComponent(id);
+    const d=el("div","detail");
+    d.innerHTML=`<dl class="kv">
+        <dt>案件 ID</dt><dd class="mono">${esc(c.id)}</dd>
+        <dt>標題</dt><dd>${esc(c.title)}</dd>
+        <dt>日期</dt><dd>${esc(c.dates)}　${nf(c.count)} 站</dd>
+        <dt>建立 / 更新</dt><dd class="mono">${esc(c.created)}　→　${esc(c.updated)}</dd>
+        <dt>連結</dt><dd class="mono" style="word-break:break-all">${esc(link)}</dd>
+      </dl>
+      <div class="row" style="margin:0 0 11px">
+        <button class="btn btn-sm" id="csCopy">複製連結</button>
+        <button class="btn btn-sm" id="csMd">下載 Markdown</button>
+        <a class="btn btn-sm" href="${esc(link)}" target="_blank" rel="noopener" style="text-decoration:none">在工具中開啟</a>
+      </div>
+      <pre class="md">${esc(c.md)||"（這個案子沒有 Markdown 內容）"}</pre>`;
+    host.innerHTML=""; host.appendChild(d);
+    $("csCopy").onclick=()=>{ navigator.clipboard.writeText(link).then(()=>toast("連結已複製")); };
+    $("csMd").onclick=()=>download(c.id+".md", c.md||"");
+  }catch(e){ host.innerHTML='<div class="detail"><span class="msgline bad">'+esc(e.message)+'</span></div>'; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   5 · 錯誤與健康
+   ══════════════════════════════════════════════════════════════════════ */
+async function loadHealth(){
+  D.er = await api("adminErrors",{days:RANGE,status:D.erStatus||"全部"});
+  renderHealth();
+}
+function renderHealth(){
+  const host=$("p-health"); host.innerHTML="";
+
+  /* 連線健康：真的各打一次 API 才算數，所以要按按鈕才跑 */
+  const c0=el("div","card");
+  c0.appendChild(el("header",null,`<h2>連線健康</h2>
+    <span class="hint">會真的各打一次 Geocoding 與 Places，確認金鑰與權限是活的。每次約 2–4 秒、兩次 API 呼叫。</span>`));
+  const b0=el("div","body");
+  b0.innerHTML='<button class="btn btn-primary btn-sm" id="hcGo">執行健康檢查</button><div id="hcOut" style="margin-top:12px"></div>';
+  c0.appendChild(b0); host.appendChild(c0);
+
+  const c1=el("div","card");
+  c1.appendChild(el("header",null,`<h2>錯誤分組</h2>
+    <span class="hint">同一則訊息合併計算，先修次數多、影響人多的。</span>`));
+  c1.appendChild(el("div","body", D.er.groups.length ? `<div class="scroll"><table class="grid">
+    <thead><tr><th>訊息</th><th class="num">次數</th><th class="num">影響人數</th><th>最後發生</th></tr></thead>
+    <tbody>${D.er.groups.map(g=>`<tr><td>${esc(g.msg)}</td><td class="num">${nf(g.n)}</td>
+      <td class="num">${nf(g.users)}</td><td class="nowrap mono">${esc(g.last)}</td></tr>`).join("")}
+    </tbody></table></div>` : '<div class="empty">這段期間沒有任何錯誤紀錄。這是好消息，但也記得偶爾確認一下埋點還活著。</div>'));
+  host.appendChild(c1);
+
+  const c2=el("div","card");
+  c2.appendChild(el("header",null,'<h2>錯誤明細</h2><span class="hint">處理完按「標記已處理」，狀態會寫回試算表</span>'));
+  const b2=el("div","body");
+  const bar=el("div","bar");
+  bar.innerHTML=`<label for="erS">狀態</label>
+    <select id="erS">${["全部","新","已處理"].map(s=>`<option${s===(D.erStatus||"全部")?" selected":""}>${s}</option>`).join("")}</select>
+    <button class="btn btn-sm" id="erGo">篩選</button>`;
+  b2.appendChild(bar);
+  const tw=el("div","tblwrap");
+  tw.innerHTML = D.er.list.length ? `<table class="grid">
+    <thead><tr><th>時間</th><th>來源</th><th>動作</th><th>訊息</th><th>使用者</th><th>版本</th><th>狀態</th><th></th></tr></thead>
+    <tbody>${D.er.list.map(r=>`<tr>
+      <td class="nowrap mono">${esc(r.time)}</td><td class="nowrap"><span class="chip">${esc(r.src)}</span></td>
+      <td class="nowrap">${esc(r.act)}</td>
+      <td>${esc(r.msg)}${r.detail?`<details class="tbl" style="border:none;padding:0;margin:3px 0 0"><summary>詳細</summary><pre class="md" style="max-height:180px;margin-top:6px">${esc(r.detail)}</pre></details>`:""}</td>
+      <td class="nowrap">${esc(r.user)||"—"}</td><td class="nowrap mono">${esc(r.app)}</td>
+      <td class="nowrap"><span class="chip ${/^新/.test(r.status)?"bad":"done"}">${esc(r.status)}</span></td>
+      <td class="nowrap">${/^新/.test(r.status)?`<button class="btn btn-sm" data-row="${r.row}">標記已處理</button>`:""}</td>
+    </tr>`).join("")}</tbody></table>` : '<div class="empty">沒有符合條件的錯誤紀錄。</div>';
+  b2.appendChild(tw); c2.appendChild(b2); host.appendChild(c2);
+
+  $("erGo").onclick=()=>{ D.erStatus=$("erS").value; go("health",true); };
+  tw.querySelectorAll("button[data-row]").forEach(b=>b.onclick=async()=>{
+    b.disabled=true; b.textContent="處理中…";
+    try{ await api("adminErrorSet",{row:+b.dataset.row,status:"已處理"}); toast("已標記"); go("health",true); }
+    catch(e){ b.disabled=false; b.textContent="標記已處理"; toast(e.message); }
+  });
+  $("hcGo").onclick=async()=>{
+    const btn=$("hcGo"), out=$("hcOut");
+    btn.disabled=true; btn.textContent="檢查中…"; out.innerHTML='<span class="tiny">正在實際呼叫 API…</span>';
+    try{
+      const h=await api("adminHealth");
+      out.innerHTML=`<table class="grid"><tbody>${h.items.map(i=>`<tr>
+        <td class="nowrap" style="width:1%"><span class="dot ${i.ok==="ok"?"ok":i.ok==="warn"?"warn":"bad"}"></span>${esc(i.name)}</td>
+        <td>${esc(i.note)}</td></tr>`).join("")}</tbody></table>
+        <p class="tiny" style="margin:9px 0 0">檢查時間 ${esc(h.checked)}</p>`;
+    }catch(e){ out.innerHTML='<span class="msgline bad">'+esc(e.message)+'</span>'; }
+    finally{ btn.disabled=false; btn.textContent="執行健康檢查"; }
+  };
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   6 · 成本與配額
+   ══════════════════════════════════════════════════════════════════════ */
+async function loadCost(){
+  D.cost = await api("adminCost",{days:RANGE});
+  renderCost();
+}
+function renderCost(){
+  const host=$("p-cost"); host.innerHTML="";
+  const c=D.cost, s=c.sum;
+  const gTot=s.g+s.gh, pTot=s.p+s.ph;
+  const gHit=gTot?Math.round(s.gh/gTot*100):0;
+  const pHit=pTot?Math.round(s.ph/pTot*100):0;
+
+  const tiles=el("div","tiles");
+  [["期間估算費用","US$ "+c.cost.toFixed(2), RANGE+" 天，含 Geocoding 與 Places"],
+   ["快取省下","US$ "+c.saved.toFixed(2), "命中沒打 API 的部分"],
+   ["Geocoding 呼叫",nf(s.g),"快取命中 "+nf(s.gh)+" 次（"+gHit+"%）"],
+   ["Places 呼叫",nf(s.p),"快取命中 "+nf(s.ph)+" 次（"+pHit+"%）"]
+  ].forEach(([a,b,d])=>tiles.appendChild(el("div","tile",
+    `<div class="k">${esc(a)}</div><div class="v">${esc(b)}</div><div class="n">${esc(d)}</div>`)));
+  host.appendChild(tiles);
+
+  const c1=el("div","card");
+  c1.appendChild(el("header",null,`<h2>每日 API 呼叫</h2>
+    <span class="hint">只算真的打出去的，快取命中不列入。單價：Geocoding US$${c.price.geocode}／次、Places US$${c.price.places}／次，改價請改 Code.gs 的 PRICE_* 兩行。</span>`));
+  const b1=el("div","body");
+  const ch=el("div","chart"); b1.appendChild(ch);
+  const lg=el("div","legend"); b1.appendChild(lg);
+  const rows=c.series.map(d=>({label:d.d.slice(5).replace("-","/"), tip:d.d, parts:[d.g,d.p]}));
+  b1.insertAdjacentHTML("beforeend", tableFor(rows, ["Geocoding","Places"]));
+  c1.appendChild(b1); host.appendChild(c1);
+  colChart(ch, rows, ["Geocoding","Places"], {height:210, aria:"每日 API 呼叫次數"});
+  legend(["Geocoding","Places"], lg);
+
+  const c2=el("div","card");
+  c2.appendChild(el("header",null,'<h2>快取現況</h2><span class="hint">快取是把費用壓在趨近於零的主要原因</span>'));
+  c2.appendChild(el("div","body",`<table class="grid"><tbody>
+      <tr><td>地點快取</td><td class="num">${nf(c.cache.geo)} 筆</td><td class="tiny">永久保留，地址→座標</td></tr>
+      <tr><td>餐廳快取</td><td class="num">${nf(c.cache.rest)} 筆</td><td class="tiny">其中 ${nf(c.cache.restStale)} 筆已過期，可在「資料維運」清掉</td></tr>
+    </tbody></table>
+    <p class="tiny" style="margin:11px 0 0">帳單目前掛在個人信用卡。金額趨近於零，但這件事該讓主管知悉，也是搬到 Workspace 公用帳號的主要理由之一。實際帳單以 Google Cloud 計費頁為準，這裡只是依呼叫次數推算。</p>`));
+  host.appendChild(c2);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   7 · 資料維運
+   ══════════════════════════════════════════════════════════════════════ */
+async function loadOps(){
+  D.ops = await api("adminOps");
+  renderOps();
+  checkFrontVersion();
+}
+function renderOps(){
+  const host=$("p-ops"); host.innerHTML="";
+  const o=D.ops;
+
+  const c1=el("div","card");
+  c1.appendChild(el("header",null,`<h2>試算表</h2><span class="hint">${esc(o.sheet.name)}</span>`));
+  c1.appendChild(el("div","body",`<div class="scroll"><table class="grid">
+      <thead><tr><th>分頁</th><th class="num">資料列</th><th class="num">欄</th><th>狀態</th></tr></thead>
+      <tbody>${o.tabs.map(t=>`<tr><td>${esc(t.name)}</td><td class="num">${t.exists?nf(t.rows):"—"}</td>
+        <td class="num">${t.exists?t.cols:"—"}</td>
+        <td>${t.exists?'<span class="chip done">正常</span>':'<span class="chip">尚未建立（第一次用到時自動建）</span>'}</td></tr>`).join("")}
+      </tbody></table></div>
+      <p class="tiny" style="margin:11px 0 0"><a href="${esc(o.sheet.url)}" target="_blank" rel="noopener">在 Google 試算表開啟</a>
+      提醒：<b>回饋</b>的收件編號是用列數推算的，清資料請改狀態欄，不要手動刪列。</p>`));
+  host.appendChild(c1);
+
+  const two=el("div","cols");
+
+  const c2=el("div","card");
+  c2.appendChild(el("header",null,'<h2>高鐵班表</h2><span class="hint">改點時由管理者重新匯入</span>'));
+  c2.appendChild(el("div","body",`<dl class="kv" style="display:grid;grid-template-columns:auto 1fr;gap:5px 16px;font-size:13.5px;margin:0">
+      <dt class="tiny">班次數</dt><dd class="mono">${nf(o.timetable.rows)} 班</dd>
+      <dt class="tiny">每日行駛</dt><dd class="mono">${nf(o.timetable.daily)} 班</dd>
+      <dt class="tiny">限定行駛日</dt><dd class="mono">${nf(o.timetable.limited)} 班</dd>
+      <dt class="tiny">最後更新</dt><dd class="mono">${esc(o.timetable.updated)||"未記錄"}</dd>
+    </dl>
+    <p class="tiny" style="margin:11px 0 0">疏運加班車不在裡面，連假前後仍需人工查。有 TDX 金鑰的話可改跑 <span class="mono">refreshTimetable()</span> 自動更新。</p>`));
+  two.appendChild(c2);
+
+  const c3=el("div","card");
+  c3.appendChild(el("header",null,'<h2>指令碼屬性</h2><span class="hint">只顯示有沒有設定，不顯示內容</span>'));
+  c3.appendChild(el("div","body",`<table class="grid"><tbody>
+      ${Object.keys(o.props).map(k=>`<tr><td class="mono">${esc(k)}</td><td>${esc(o.props[k])}</td></tr>`).join("")}
+    </tbody></table>
+    <p class="tiny" style="margin:11px 0 0">通行碼外流的處理：改 <span class="mono">ACCESS_KEY</span> 即時生效，不用重新部署，改完通知全員。</p>`));
+  two.appendChild(c3);
+  host.appendChild(two);
+
+  const c4=el("div","card");
+  c4.appendChild(el("header",null,`<h2>版本一致性</h2><span class="hint">前端頁面、後台與後端 API 各自的版本</span>`));
+  c4.appendChild(el("div","body",`<table class="grid"><tbody>
+      <tr><td>工具前端 index.html</td><td class="mono" id="opsFrontVer">檢查中…</td></tr>
+      <tr><td>後台 admin.html</td><td class="mono">${esc(ADMIN_VERSION)}</td></tr>
+      <tr><td>後端 admin API</td><td class="mono">${esc(o.api)}</td></tr>
+    </tbody></table>
+    <p class="tiny" style="margin:11px 0 0">改過 <span class="mono">Code.gs</span> 一定要重新部署（部署 → 管理部署作業 → 鉛筆 → 版本：新版本），存檔不會生效。只改指令碼屬性則是即時生效。</p>`));
+  host.appendChild(c4);
+
+  const c5=el("div","card");
+  c5.appendChild(el("header",null,`<h2>快取清理</h2>
+    <span class="hint">只清快取。回饋與使用紀錄一律不動——收件編號靠列數推算，稽核價值也靠它。</span>`));
+  c5.appendChild(el("div","body",`
+    <div class="row" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+      <button class="btn btn-sm" data-clean="restStale">清掉過期的餐廳快取</button>
+      <button class="btn btn-sm btn-danger" data-clean="geoAll">清空地點快取</button>
+      <span class="msgline" id="opsMsg"></span>
+    </div>
+    <p class="tiny" style="margin:11px 0 0">餐廳快取 ${o.cacheDays} 天過期，清掉只是讓下次查詢重打一次 Places。
+    地點快取是永久保留的，清空等於下次每個地址都要重打 Geocoding，非必要不要按。</p>`));
+  host.appendChild(c5);
+
+  host.querySelectorAll("button[data-clean]").forEach(b=>{
+    const what=b.dataset.clean, label=b.textContent;
+    b.onclick=async()=>{
+      if(b.dataset.armed!=="1"){ b.dataset.armed="1"; b.textContent="再按一次確定";
+        setTimeout(()=>{ if(b.dataset.armed==="1"){ b.dataset.armed=""; b.textContent=label; } },4000); return; }
+      b.dataset.armed=""; b.disabled=true; b.textContent="清理中…";
+      const msg=$("opsMsg"); msg.className="msgline"; msg.textContent="";
+      try{
+        const r=await api("adminClean",{what});
+        msg.className="msgline ok"; msg.textContent=`已刪除 ${r.deleted} 列（${r.what}）`;
+        toast("清理完成");
+        go("ops",true);
+      }catch(e){ msg.className="msgline bad"; msg.textContent=e.message; b.disabled=false; b.textContent=label; }
+    };
+  });
+}
+/** 直接抓同一個站台的 index.html，讀出它的 APP_VERSION，確認發布出去的真的是新版 */
+async function checkFrontVersion(){
+  const n=$("opsFrontVer"); if(!n) return;
+  try{
+    const t=await (await fetch("index.html?_="+Date.now(),{cache:"no-store"})).text();
+    const m=t.match(/APP_VERSION\s*=\s*"([^"]+)"/);
+    n.textContent = m ? m[1] : "讀到了頁面但找不到版本號";
+  }catch(e){ n.textContent="讀不到（後台與 index.html 不在同一個站台？）"; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   啟動
+   ══════════════════════════════════════════════════════════════════════ */
+buildTabs();
+$("lgGo").onclick=doLogin;
+["lgUser","lgPass"].forEach(id=>$(id).addEventListener("keydown",e=>{ if(e.key==="Enter") doLogin(); }));
+$("btnLogout").onclick=()=>signOut(false);
+$("btnReload").onclick=()=>{ invalidate(); go(CUR,true); };
+$("rangeSel").onchange=()=>{ RANGE=+$("rangeSel").value; invalidate(); go(CUR,true); };
+
+if(TOKEN){
+  api("adminPing").then(r=>{ WHO=r.user; enter(); }).catch(()=>signOut(true));
+}
+</script>
+</body>
+</html>
