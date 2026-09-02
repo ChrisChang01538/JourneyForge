@@ -444,7 +444,7 @@ details.cfg .body{padding:14px 15px;border-top:1px solid var(--rule-soft)}
   <div class="runbar">
     <button class="btn btn-primary btn-lg" id="btnRun">規劃行程</button>
     <div id="connectBar"></div>
-    <div class="status" id="status">按下去會依地點分天、決定順序、插午餐、配車次。通行碼提示=阿榮發發發</div>
+    <div class="status" id="status">按下去會依地點分天、決定順序、插午餐、配車次。通行碼提示：阿榮發發發</div>
   </div>
 
   <div class="casebox" id="caseBox"></div>
@@ -544,7 +544,7 @@ details.cfg .body{padding:14px 15px;border-top:1px solid var(--rule-soft)}
 const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbxi0dsBsdvcepQo7WS-h7UvC2Sr8VEepL5BR9uv6PdofsKyA8Gt13Cpjy5_34W8Gip6/exec";
 
 /* 版本號：改版時只改這一行，右上角徽章與版本公告靠它對齊 */
-const APP_VERSION="26.02";
+const APP_VERSION="26.03";
 
 const WK=["日","一","二","三","四","五","六"];
 const STATIONS=[["0990","南港"],["1000","臺北"],["1010","板橋"],["1020","桃園"],["1030","新竹"],
@@ -799,7 +799,7 @@ function placeNode(txt,fallback){
   const g=coarse(txt);
   let nm=String((String(txt||"").split(/[（(]/)[0]||"")).trim();
   nm=nm.replace(/(大廳|大門|正門|入口|出口|[0-9０-９]+號).*$/,"").trim();
-  return {name:nm||fallback,addr:String(txt||""),lat:g.lat,lng:g.lng};
+  return {name:nm||fallback,addr:String(txt||""),lat:g.lat,lng:g.lng,rough:!g.exact};
 }
 /* 一天的兩個端點：集合與解散。解散沒填就等於集合（FB-002） */
 function setEnds(day){
@@ -1379,6 +1379,30 @@ function fmtGap(m){
   return h?(h+" 小時"+(r?(" "+r+" 分"):"")):(r+" 分");
 }
 
+/* 手改行程卡上的地址之後要重新定位。
+   舊座標留著的話，Google 地圖路線、車程推估、跨天距離全都還指著上一個地點——
+   畫面上看起來已經改好了，只有輸出是錯的，而且沒有任何提示。（FB-010）
+   先用 coarse() 立刻給一個粗略座標讓時間軸能重算，有通行碼再升級成精確座標。 */
+async function relocate(st){
+  const pl=PLACES[st.ref]; if(!pl) return;
+  const addr=String(st.addr||"").trim();
+  pl.name=st.name; pl.addr=addr;
+  /* 名稱與地址都填了就不再是「午餐（待訂）」占位——占位是不畫進地圖路線的 */
+  if(addr&&String(st.name||"").trim()&&!/待訂/.test(st.name)) { pl.pending=false; st.pending=false; }
+  const g=coarse(addr);
+  pl.lat=g.lat; pl.lng=g.lng; pl.exact=!!g.exact; pl.rough=!g.exact;
+  renderEditor(); save();
+  if(!addr||g.exact||!hasBackend()) return;
+  try{
+    const r=await gas("geocode",{addresses:[addr]});
+    if(r&&r[0]&&r[0].lat!=null){
+      pl.lat=r[0].lat; pl.lng=r[0].lng; pl.exact=true; pl.rough=false;
+      GEO[addr]=[r[0].lat,r[0].lng];
+      renderEditor(); save();
+    }
+  }catch(_){ /* 定位失敗就維持粗略座標，地圖連結會改用地址原文，不會指錯地方 */ }
+}
+
 function legRow(r,di){
   const to=r.ret?endLabel(DAYS[di]):("至"+destName(r.to));
   const d=el("div","leg",
@@ -1392,6 +1416,7 @@ function legRow(r,di){
 }
 function stopRow(r,di){
   const day=DAYS[di],st=r.stop,i=r.idx;
+  const pl=P(st.ref), loose=!pl||pl.lat==null||pl.rough;
   const clash=st.kind==="visit"&&r.start<toMin(CFG.lunchTo)&&r.end>toMin(CFG.lunchFrom)+(+CFG.tolerance);
   const over=r.end>toMin(CFG.endTarget), overMax=r.end>toMin(CFG.endMax);
   const d=el("div","stop"+(st.kind==="lunch"?" lunch":"")+(clash?" clash":"")+(over?" over":"")+(overMax?" over-max":""),
@@ -1399,14 +1424,18 @@ function stopRow(r,di){
     "<div class='clock'>"+toHM(r.start)+"<br>"+toHM(r.end)+"</div>"+
     "<div class='fields'><input type='text' class='name' data-fid='"+di+":name:"+i+"' value='"+esc(st.name)+"' aria-label='名稱'>"+
     "<input type='text' class='addr' data-fid='"+di+":addr:"+i+"' value='"+esc(st.addr)+"' aria-label='地址' placeholder='"+(st.kind==="lunch"?"餐廳地址":"地址")+"'>"+
-    (st.meta?"<div class='meta'>"+esc(st.meta)+"</div>":"")+"</div>"+
+    (st.meta?"<div class='meta'>"+esc(st.meta)+"</div>":"")+
+    (loose?"<div class='meta'>位置尚未精確定位——地圖連結改用這行地址，車程為粗估</div>":"")+"</div>"+
     "<div class='side'><div class='row'><input type='number' class='stay' data-fid='"+di+":stay:"+i+"' min='5' max='300' step='5' value='"+st.stay+"'><span class='unit'>分鐘</span></div>"+
     "<div class='row'><button class='iconbtn up' title='上移'>▲</button><button class='iconbtn down' title='下移'>▼</button>"+
     "<select class='moveday' title='移到其他天'>"+DAYS.map((dd,k)=>"<option value='"+k+"'"+(k===di?" selected":"")+">"+esc(dd.date?shortDate(dd.date):("第"+(k+1)+"天"))+"</option>").join("")+"</select>"+
     "<button class='iconbtn del' title='刪除'>×</button></div></div>");
   d.draggable=true;
   d.querySelector(".name").oninput=e=>{st.name=e.target.value;if(PLACES[st.ref])PLACES[st.ref].name=e.target.value;};
+  /* 改完離開欄位才重新定位（change 而不是 input），不然每打一個字就打一次 API */
+  d.querySelector(".name").onchange=()=>relocate(st);
   d.querySelector(".addr").oninput=e=>{st.addr=e.target.value;if(PLACES[st.ref])PLACES[st.ref].addr=e.target.value;};
+  d.querySelector(".addr").onchange=()=>relocate(st);
   d.querySelector(".stay").oninput=e=>{st.stay=Math.max(0,parseInt(e.target.value,10)||0);renderEditor();};
   d.querySelector(".up").onclick=()=>{if(i>0){day.stops.splice(i-1,0,day.stops.splice(i,1)[0]);renderEditor();}};
   d.querySelector(".down").onclick=()=>{if(i<day.stops.length-1){day.stops.splice(i+1,0,day.stops.splice(i,1)[0]);renderEditor();}};
@@ -1691,7 +1720,10 @@ $("btnSave").onclick=async()=>{ if(await saveCase(false)) logUse("儲存案件")
 /* Google 地圖路線連結：官方的 Maps URLs 格式，免金鑰，順序照我們排的走 */
 function mapsUrl(day){
   setOrigin(day);
-  const at=p=>(p&&p.lat!=null&&p.lng!=null)?(p.lat+","+p.lng):((p&&(p.addr||p.name))||"");
+  /* 座標只有在精確定位時才拿來當地圖的點。粗略座標（區或縣市層級的種子點）
+     丟給 Google 反而會指到區公所那一帶，不如把地址原文交給它自己判斷。
+     車程推估仍然吃粗略座標——粗估的距離還是比一律 20 分鐘準。 */
+  const at=p=>(p&&!p.rough&&p.lat!=null&&p.lng!=null)?(p.lat+","+p.lng):((p&&(p.addr||p.name))||"");
   const o=at(ORIGIN);
   const pts=[];
   (day.stops||[]).forEach(st=>{
@@ -1784,7 +1816,22 @@ function buildTables(){
   }
   return h;
 }
-$("btnPrint").onclick=()=>{$("printView").innerHTML=buildTables();saveCase(true);logUse("列印");window.print();};
+$("btnPrint").onclick=async()=>{
+  $("printView").innerHTML=buildTables();
+  await saveCase(true);
+  logUse("列印");
+  printAs(outName(""));
+};
+/* 「列印 → 另存為 PDF」的預設檔名取自 document.title，借用一下再還回去。
+   afterprint 在少數瀏覽器不一定觸發，所以補一個計時器保險，
+   免得分頁標題一直卡在檔名上。 */
+function printAs(name){
+  const old=document.title, back=()=>{ document.title=old; removeEventListener("afterprint",back); };
+  document.title=name;
+  addEventListener("afterprint",back);
+  setTimeout(back,60000);
+  window.print();
+}
 window.addEventListener("beforeprint",()=>{$("printView").innerHTML=buildTables();});
 $("btnCopy").onclick=async()=>{
   const h=buildTables();
@@ -2084,23 +2131,33 @@ function makeDocx(){
     F('word/_rels/document.xml.rels',drels),F('word/styles.xml',styles),
     F('word/document.xml',buildDocXml())]);
 }
+/* 輸出檔名帶案件代號。刻意只做在檔名、不碰版面：
+   代號要拿掉就是改檔名，另存的時候一眼就看得到，不必指望使用者事後
+   回頭刪頁尾——公文的版面完全不受影響。 */
+const safeName=s=>String(s||"").replace(/[\\/:*?"<>|]/g,"").trim()||"行程表";
+const outName=ext=>safeName(CFG.docTitle)+(CASE_ID?("_"+CASE_ID):"")+ext;
+
 function docInfoWarn(){
   if(/O{3,}/i.test(CFG.attendees||"")) return "出席人員還是預設的 OOOOO，記得改成實際名單";
   if(!String(CFG.docTitle||"").trim()||CFG.docTitle==="行程表") return "文件標題還沒改，請填實際的計畫名稱";
   return "";
 }
-$("btnWord").onclick=()=>{
+$("btnWord").onclick=async()=>{
   if(!DAYS.some(d=>(d.stops||[]).length)){ toast("還沒有行程可以輸出"); return; }
   const wmsg=docInfoWarn(); if(wmsg) toast(wmsg);
+  /* 先存檔再產檔案。CASE_ID 是存檔當下才產生的，順序反過來的話
+     第一次輸出的那一份檔名會沒有代號，而那份通常正是會被轉寄出去的。
+     存不成（沒填通行碼、離線）就照樣輸出，只是檔名沒有代號。 */
+  await saveCase(true);
   try{
     const bytes=makeDocx();
     const blob=new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
     const a=document.createElement("a");
     a.href=URL.createObjectURL(blob);
-    a.download=(CFG.docTitle||"行程表").replace(/[\\/:*?"<>|]/g,"")+".docx";
+    a.download=outName(".docx");
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(a.href),2000);
-    toast("Word 檔已下載"); saveCase(true); logUse("產生Word");
+    toast(CASE_ID?("Word 檔已下載："+outName(".docx")):"Word 檔已下載"); logUse("產生Word");
   }catch(e){ toast("產生失敗："+e.message); }
 };
 

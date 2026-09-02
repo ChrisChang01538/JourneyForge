@@ -116,6 +116,15 @@ table.grid tr.clickable{cursor:pointer}
 .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:1px}
 .dot.ok{background:var(--good)} .dot.warn{background:var(--warning)} .dot.bad{background:var(--critical)}
 
+.hbar{height:5px;width:92px;background:var(--rule-soft);border:1px solid var(--rule-soft);margin-top:5px}
+.hbar>i{display:block;height:100%;background:var(--good)}
+.hbar.warn>i{background:var(--warning)} .hbar.bad>i{background:var(--critical)}
+.banner{border:1px solid var(--alert);background:var(--alert-soft);color:var(--alert);
+  padding:11px 14px;margin-bottom:18px;font-size:13.5px}
+.banner.warn{border-color:var(--warn);background:var(--warn-soft);color:var(--warn)}
+.banner b{display:block;font-size:14px;margin-bottom:2px}
+.banner .go{color:inherit;text-decoration:underline;cursor:pointer;background:none;border:0;padding:0;font:inherit}
+
 /* ── 圖表 ───────────────────────────────────────────── */
 .chart{position:relative}
 .chart svg{display:block;width:100%}
@@ -217,7 +226,7 @@ pre.md{white-space:pre-wrap;font-family:var(--font-mono);font-size:12px;line-hei
 const GAS_URL = "https://script.google.com/macros/s/AKfycbxi0dsBsdvcepQo7WS-h7UvC2Sr8VEepL5BR9uv6PdofsKyA8Gt13Cpjy5_34W8Gip6/exec";
 
 /* 後台自己的版本號，跟工具的 APP_VERSION 各走各的 */
-const ADMIN_VERSION = "26.03";
+const ADMIN_VERSION = "26.04";
 
 const $  = id => document.getElementById(id);
 const el = (tag, cls, html) => { const n=document.createElement(tag); if(cls) n.className=cls;
@@ -468,6 +477,19 @@ function ovSeries(){
 function renderOverview(){
   const k=D.ov.kpi, host=$("p-overview");
   host.innerHTML="";
+
+  /* 儲存健康度的橫幅。放在總覽最上面，是因為「資料維運」沒人會每天點進去，
+     而這件事燒起來是整份試算表一起死。點橫幅直接跳過去看細節。 */
+  const hh=D.ov.health;
+  if(hh && hh.level!=="ok"){
+    const bad=hh.level==="bad";
+    const b=el("div","banner"+(bad?"":" warn"),
+      "<b>"+(bad?"儲存空間已達紅線":"儲存空間接近警戒")+"</b>"+
+      (hh.alerts&&hh.alerts.length ? esc(hh.alerts.join("、"))+"。" : "有指標超過警戒值。")+
+      " <button class='go' type='button'>到「資料維運」看處置方式 →</button>");
+    b.querySelector(".go").onclick=()=>go("ops");
+    host.appendChild(b);
+  }
 
   const tiles=el("div","tiles");
   [["期間內規劃次數",nf(k.plans),"共 "+nf(k.total)+" 次操作"],
@@ -905,6 +927,48 @@ async function loadOps(){
 function renderOps(){
   const host=$("p-ops"); host.innerHTML="";
   const o=D.ops;
+
+  /* 儲存健康度。四個指標各自一列：燈號、數字、比例條，以及「紅了要幹嘛」。
+     處置說明一定要跟燈號放在一起——三個月後看到紅燈的人不會是寫這段的人。 */
+  if(o.health){
+    const h=o.health;
+    const c0=el("div","card");
+    c0.appendChild(el("header",null,
+      '<h2>儲存健康度</h2><span class="hint">'+
+      (h.level==="bad" ? '有指標已達紅線，處置方式看每一列的最後一欄'
+       : h.level==="warn" ? '有指標接近警戒，還不急，但可以開始安排'
+       : '目前都在安全範圍')+'</span>'));
+    c0.appendChild(el("div","body",'<div class="scroll"><table class="grid">'+
+      '<thead><tr><th>指標</th><th>目前</th><th>用量</th><th>備註</th><th>到紅線要做的事</th></tr></thead><tbody>'+
+      h.items.map(i=>{
+        const w=Math.max(0,Math.min(100,i.pct));
+        return '<tr><td class="nowrap"><span class="dot '+i.level+'"></span>'+esc(i.name)+'</td>'+
+          '<td class="mono nowrap">'+esc(i.display)+'</td>'+
+          '<td style="width:1%"><div class="hbar '+(i.level==="ok"?"":i.level)+'"><i style="width:'+w+'%"></i></div>'+
+            '<span class="tiny">'+i.pct+'%</span></td>'+
+          '<td class="tiny">'+esc(i.note)+'</td>'+
+          '<td class="tiny">'+esc(i.fix)+'</td></tr>';
+      }).join("")+'</tbody></table></div>'+
+      '<p class="tiny" style="margin:11px 0 0">前兩項的上限（單一儲存格 '+nf(o.limits.cellMax)+
+      ' 字元、單份試算表 '+nf(o.limits.cellsMax)+' 格）是 Google 定的，改不了；黃紅兩條警戒線是我們自己設的，'+
+      '在 <span class="mono">Code.gs</span> 開頭的常數區可以調。使用者端另有一道硬擋：案件超過 '+
+      nf(o.limits.cellStop)+' 字元就存不進去，並且會收到一句看得懂的說明。</p>'));
+    host.appendChild(c0);
+  }
+
+  /* 各分頁的成長速率。只有列數看不出還剩多少時間，要看斜率。 */
+  if(o.growth){
+    const g=el("div","card");
+    g.appendChild(el("header",null,'<h2>成長速率</h2><span class="hint">哪一張表在長、長多快</span>'));
+    g.appendChild(el("div","body",'<div class="scroll"><table class="grid">'+
+      '<thead><tr><th>分頁</th><th class="num">總列數</th><th class="num">近 30 天</th><th class="num">近 7 天</th><th class="num">約每月</th></tr></thead><tbody>'+
+      o.growth.map(r=>'<tr><td>'+esc(r.name)+'</td><td class="num">'+nf(r.rows)+'</td>'+
+        '<td class="num">'+nf(r.d30)+'</td><td class="num">'+nf(r.d7)+'</td>'+
+        '<td class="num mono">'+(r.d7?("+"+nf(Math.round(r.d7/7*30))):"—")+'</td></tr>').join("")+
+      '</tbody></table></div>'+
+      '<p class="tiny" style="margin:11px 0 0">「約每月」是拿近 7 天推的，比近 30 天敏感，剛換季或剛上線時看這欄。</p>'));
+    host.appendChild(g);
+  }
 
   const c1=el("div","card");
   c1.appendChild(el("header",null,`<h2>試算表</h2><span class="hint">${esc(o.sheet.name)}</span>`));
