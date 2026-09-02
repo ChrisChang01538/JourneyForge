@@ -44,15 +44,20 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;
   border:1px solid rgba(240,207,146,.5);background:rgba(28,14,17,.5);padding:7px 13px;border-radius:2px}
 .masthead a.back:hover{background:var(--gold);color:#1b0e11;border-color:var(--gold)}
 /* 看板娘 Akari：整張圖鋪滿頁首，左側壓一層暗色漸層讓字讀得到 */
-.hero-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 38%;display:block}
-.hero-shade{position:absolute;inset:0;background:
+/* 圖、遮罩、下緣淡出、浮水印都只是裝飾，一律 pointer-events:none。
+   少了這一行，蓋在最上面的 .hero-fade 會把頁首那三顆連結的點擊吃掉——
+   游標變成手指、hover 也有反應（那是 :hover，不吃 pointer-events），但點下去沒事。
+   .hero-body 另外墊一層 z-index，DOM 順序再怎麼改都壓得住。（FB-011） */
+.hero-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 38%;display:block;
+  pointer-events:none}
+.hero-shade{position:absolute;inset:0;pointer-events:none;background:
   linear-gradient(90deg,rgba(23,10,13,.95) 0%,rgba(23,10,13,.88) 32%,rgba(23,10,13,.5) 58%,rgba(23,10,13,.08) 84%,rgba(23,10,13,0) 100%)}
 /* 下緣淡出到頁面底色，圖與內文接得起來 */
-.hero-fade{position:absolute;left:0;right:0;bottom:0;height:56px;
+.hero-fade{position:absolute;left:0;right:0;bottom:0;height:56px;pointer-events:none;
   background:linear-gradient(180deg,rgba(23,10,13,0),var(--bg))}
-.hero-body{position:relative;min-height:296px;padding:20px 24px;
+.hero-body{position:relative;z-index:2;min-height:296px;padding:20px 24px;
   display:flex;flex-direction:column;justify-content:space-between;gap:16px}
-.hero-cap{position:absolute;right:10px;bottom:8px;font-size:10.5px;letter-spacing:.1em;
+.hero-cap{position:absolute;right:10px;bottom:8px;pointer-events:none;font-size:10.5px;letter-spacing:.1em;
   color:rgba(255,255,255,.82);background:rgba(20,9,11,.46);padding:2px 8px;border-radius:2px;
   text-shadow:0 1px 6px rgba(0,0,0,.9)}
 @media (max-width:820px){
@@ -227,6 +232,11 @@ code{font-family:var(--font-mono);font-size:.9em;background:rgba(255,255,255,.07
       <p>在行程卡上把某一站的地址改掉（例如午餐換一家），卡片、時間軸、Word 都是新的，<b>但「在 Google 地圖開啟這天的路線」點下去，那一站還停在舊的位置</b>。進出那一站的車程推估也還是照舊地點算的。</p>
       <p>現在改完地址、游標離開欄位，就會自動重新定位，地圖路線與車程跟著更新。<b>這個 bug 不會報錯</b>——行程表本身完全正確，錯的只有要傳給駕駛的那條路線，所以請留意 9 月 2 日以前排的行程，如果中途改過地址，路線連結值得再開一次確認。</p>
       <p class="tiny">沒填通行碼、或地址查不到精確位置時，地圖連結會改用你打的地址原文交給 Google 自己判斷，卡片上會顯示「位置尚未精確定位」。</p>
+    </div>
+
+    <div class="item">
+      <h4>這一頁頁首的三顆按鈕終於能按了<span class="tg tg-fix">✖ 修正</span></h4>
+      <p><b>新手指南</b>、<b>系統說明</b>、<b>← 回到工具</b>從 26.02 換上看板娘頁首之後就一直按不動——滑過去游標會變成手指、外框也會亮起來，但點下去沒反應。是頁首圖片下緣那層淡出效果蓋在按鈕上面，把點擊吃掉了。如果你之前試過幾次就放棄了，現在可以再按看看。</p>
     </div>
 
     <div class="item">

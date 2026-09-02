@@ -78,6 +78,14 @@
 
 **車程推估仍然吃粗略座標**，只有地圖連結不吃：粗估的距離再不準，也比 `kmOf` 回 null 之後一律給 20 分鐘準。
 
+**版本公告頁頁首的三顆連結按不動（FB-011）**
+
+`.hero-fade`（頁首圖片下緣淡出到頁面底色的那層）是 `position:absolute; bottom:0; height:56px`，DOM 順序在 `.hero-body` 之後，**沒有 `pointer-events:none`**，所以蓋在最上面把那一帶的點擊全吃掉了。連結剛好排在頁首底部，整組中彈。
+
+**為什麼沒人早點發現**：`:hover` 不吃 `pointer-events`，所以游標會變手指、外框會亮起來，看起來完全正常，只有點下去沒反應。26.02 換上看板娘頁首時就帶進來了。
+
+四個裝飾層（`.hero-img`／`.hero-shade`／`.hero-fade`／`.hero-cap`）一律補 `pointer-events:none`，`.hero-body` 另外墊 `z-index:2`——DOM 順序再怎麼改都壓得住。用 `document.elementFromPoint()` 在 1200px 與 760px 兩個寬度驗過命中的是 `A.back`。
+
 ### 文件
 
 - `guide.html`「七、產出之後還要做的事」加一條：對外送出前先看一眼檔名。**沒有升成第七個坑**——選了檔名這條路之後，忘了改的後果只是對方看到一串沒意義的碼，跟「把預設出席人員發出去」不同量級
