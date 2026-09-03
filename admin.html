@@ -822,10 +822,12 @@ function renderHealth(){
 
   const c1=el("div","card");
   c1.appendChild(el("header",null,`<h2>錯誤分組</h2>
-    <span class="hint">同一則訊息合併計算，先修次數多、影響人多的。</span>`));
+    <span class="hint">同一個「來源＋動作」合併計算，先修次數多、影響人多的。這裡只放真正影響使用的平台故障，使用者自己輸入錯的不會進來。</span>`));
   c1.appendChild(el("div","body", D.er.groups.length ? `<div class="scroll"><table class="grid">
-    <thead><tr><th>訊息</th><th class="num">次數</th><th class="num">影響人數</th><th>最後發生</th></tr></thead>
-    <tbody>${D.er.groups.map(g=>`<tr><td>${esc(g.msg)}</td><td class="num">${nf(g.n)}</td>
+    <thead><tr><th>來源</th><th>動作</th><th class="num">次數</th><th class="num">影響人數</th><th>最後發生</th></tr></thead>
+    <tbody>${D.er.groups.map(g=>`<tr><td class="nowrap"><span class="chip">${esc(g.src)||"—"}</span></td>
+      <td>${esc(g.act)||"—"}${g.sample?`<div class="tiny">最近：${esc(g.sample)}</div>`:""}</td>
+      <td class="num">${nf(g.n)}</td>
       <td class="num">${nf(g.users)}</td><td class="nowrap mono">${esc(g.last)}</td></tr>`).join("")}
     </tbody></table></div>` : '<div class="empty">這段期間沒有任何錯誤紀錄。這是好消息，但也記得偶爾確認一下埋點還活著。</div>'));
   host.appendChild(c1);

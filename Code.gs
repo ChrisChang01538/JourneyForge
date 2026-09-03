@@ -74,6 +74,18 @@ var SCAN_STOP_MS   = 5000;
 var CASE_ROW_WARN  = 2000;       // 案件列數，線性掃描大概從這裡開始有感
 var CASE_ROW_STOP  = 5000;
 
+/* ──────────────────────────────────────────────────────────────
+   使用者自己輸入錯的（站碼打錯、通行碼打錯、截圖太大、案件 ID 不存在…）
+   不是平台故障，畫面照樣要提示，但不該進「錯誤」表變成待處理事件。
+   丟這個而不是 Error，doPost 會在回應裡加上 userError:true，
+   前端 gas() 看到就只丟例外、不呼叫 reportErr。
+   ────────────────────────────────────────────────────────────── */
+function userErr_(msg) {
+  var e = new Error(msg);
+  e.userError = true;
+  return e;
+}
+
 function doPost(e) {
   var out;
   try {
@@ -87,7 +99,7 @@ function doPost(e) {
     }
 
     var need = prop_('ACCESS_KEY');
-    if (need && req.key !== need) throw new Error('通行碼不正確');
+    if (need && req.key !== need) throw userErr_('通行碼不正確');
 
     switch (req.action) {
       case 'ping':    out = { ok: true, data: status_(req) }; break;
@@ -104,6 +116,7 @@ function doPost(e) {
     }
   } catch (err) {
     out = { ok: false, error: String(err && err.message ? err.message : err) };
+    if (err && err.userError) out.userError = true;   /* 使用者輸入問題，前端不記錯誤 */
   }
   return ContentService.createTextOutput(JSON.stringify(out))
     .setMimeType(ContentService.MimeType.JSON);
@@ -137,7 +150,7 @@ function today_() {
  */
 function feedback_(req) {
   var text = String(req.text || '').trim();
-  if (!text) throw new Error('回饋內容是空的');
+  if (!text) throw userErr_('回饋內容是空的');
   if (text.length > 5000) text = text.slice(0, 5000) + '…（超過 5000 字，已截斷）';
 
   var sh = sheet_('回饋', ['收件編號', '時間', '使用者', '版本', '分類', '滿意度',
@@ -168,9 +181,9 @@ function feedback_(req) {
 /** 一張截圖存進雲端硬碟，回傳連結。刻意不開共用連結——回饋截圖可能有單位名稱。 */
 function fbSave_(f, id, n) {
   var b64 = String(f && f.b64 || '');
-  if (!b64) throw new Error('沒有內容');
+  if (!b64) throw userErr_('沒有內容');
   var bytes = Utilities.base64Decode(b64);
-  if (bytes.length > 5 * 1024 * 1024) throw new Error('超過 5MB');
+  if (bytes.length > 5 * 1024 * 1024) throw userErr_('超過 5MB');
   var mime = String(f.mime || 'image/png');
   var ext = (mime.split('/')[1] || 'png').replace(/[^a-z0-9]/gi, '').slice(0, 5);
   var name = id + '-' + n + '.' + ext;
@@ -366,7 +379,7 @@ function filterOpen_(list, req) {
 var CASE_HEADER = ['案件ID', '標題', '日期', '訪視家數', '建立時間', '更新時間', 'Markdown', 'JSON'];
 
 function saveCase_(req) {
-  if (!req.id) throw new Error('缺少案件 ID');
+  if (!req.id) throw userErr_('缺少案件 ID');
 
   /* 單一儲存格 50,000 字元是 Google 的硬限制，撞上去 setValues 會丟出使用者看不懂的
      原始錯誤。這裡先擋，並且講清楚三件事：多大、上限多少、可以怎麼辦。
@@ -374,7 +387,7 @@ function saveCase_(req) {
   var json = String(req.json || ''), md = String(req.md || '');
   var big = Math.max(json.length, md.length);
   if (big > CELL_STOP) {
-    throw new Error('這份行程太大（' + fmtNum_(big) + ' 字元，單一儲存格上限 '
+    throw userErr_('這份行程太大（' + fmtNum_(big) + ' 字元，單一儲存格上限 '
       + fmtNum_(CELL_MAX) + ' 字元），存不進去。請減少天數或站數，或拆成兩個案件分開存。'
       + '畫面上的行程還在，不會不見，可以先產生 Word 留底再處理。');
   }
@@ -402,7 +415,7 @@ function loadCase_(req) {
       return { id: rows[i][0], title: rows[i][1], json: String(rows[i][7] || '') };
     }
   }
-  throw new Error('找不到這個案件：' + req.id);
+  throw userErr_('找不到這個案件：' + req.id);
 }
 
 /** 最近 30 筆，新的在前 */
@@ -433,7 +446,7 @@ var TRAIN_HEADER = ['方向','車次','行駛日'].concat(ST_NAMES).concat(['更
 function timetable_(req) {
   var oi = ST_IDS.indexOf(String(req.originId));
   var di = ST_IDS.indexOf(String(req.destId));
-  if (oi < 0 || di < 0 || oi === di) throw new Error('起訖站代碼不正確');
+  if (oi < 0 || di < 0 || oi === di) throw userErr_('起訖站代碼不正確');
 
   var sh = sheet_('班表', TRAIN_HEADER);
   var rows = sh.getDataRange().getValues();
@@ -955,9 +968,14 @@ function adminErrors_(req) {
     var st = String(rows[i][8] || '新');
     if (req.status && req.status !== '全部' && st !== req.status) continue;
     var msg = String(rows[i][5] || '');
-    var g = group[msg] || (group[msg] = { msg: msg, n: 0, last: '', users: {} });
+    var src = String(rows[i][3] || ''), act = String(rows[i][4] || '');
+    /* 分組鍵用「來源＋動作」，不用訊息原文。訊息裡常帶變動數值（天數、時間、站名），
+       同一個問題會被切成好幾組，次數就失去意義。訊息改放最近一筆當範例。 */
+    var key = src + '|' + act;
+    var g = group[key] || (group[key] = { msg: act, src: src, act: act, sample: msg,
+                                          n: 0, last: '', users: {} });
     g.n++; g.users[String(rows[i][1] || '')] = 1;
-    var s = stamp_(rows[i][0]); if (s > g.last) g.last = s;
+    var s = stamp_(rows[i][0]); if (s > g.last) { g.last = s; g.sample = msg; }
     if (list.length < 300) {
       list.push({ row: i + 1, time: s, user: String(rows[i][1] || ''), app: String(rows[i][2] || ''),
                   src: String(rows[i][3] || ''), act: String(rows[i][4] || ''), msg: msg,

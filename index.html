@@ -29,10 +29,10 @@ h1,h2,h3{margin:0}
 .doclinks a{color:var(--teal);font-weight:600;text-decoration:none;margin-left:18px}
 .doclinks a:first-child{margin-left:0}
 .doclinks a:hover{text-decoration:underline}
+/* 純標示，不是連結——版本公告已經有自己的按鈕了 */
 .verbadge{display:inline-block;margin-left:18px;font-family:var(--font-mono);font-size:11.5px;
   letter-spacing:.06em;color:var(--teal);border:1px solid var(--teal);background:var(--teal-soft);
-  padding:1px 7px;border-radius:2px;text-decoration:none;font-weight:600}
-.verbadge:hover{background:var(--teal);color:#fff}
+  padding:1px 7px;border-radius:2px;font-weight:600}
 @media (max-width:640px){.mast-right{align-items:flex-start;width:100%}}
 .toolbar{display:flex;gap:7px;flex-wrap:wrap}
 button{font-family:inherit;font-size:13px;cursor:pointer}
@@ -257,6 +257,9 @@ details.cfg .body{padding:14px 15px;border-top:1px solid var(--rule-soft)}
   background:var(--surface);border:1px solid var(--rule);border-top:3px solid var(--teal);
   box-shadow:0 8px 30px rgba(21,32,42,.22)}
 .fb-panel[hidden],.fb-mask[hidden]{display:none}
+/* 開啟案件：沿用回饋面板的外框與內距，位置改成置中 */
+.oc-panel{right:auto;bottom:auto;left:50%;top:50%;transform:translate(-50%,-50%);width:396px}
+.oc-panel input[type=text]{font-family:var(--font-mono)}
 /* .fb-foot 之類設了 display:flex，會蓋掉 [hidden] 的預設樣式，要補這一條 */
 .fb-panel [hidden]{display:none!important}
 .fb-head{display:flex;align-items:baseline;gap:10px;padding:12px 15px;border-bottom:1px solid var(--rule-soft)}
@@ -350,9 +353,10 @@ details.cfg .body{padding:14px 15px;border-top:1px solid var(--rule-soft)}
         <a href="guide.html" target="_blank" rel="noopener">新手指南</a>
         <a href="sop.html" target="_blank" rel="noopener">系統說明</a>
         <a href="patch-notes.html" target="_blank" rel="noopener">版本公告</a>
-        <a class="verbadge" id="verBadge" href="patch-notes.html" target="_blank" rel="noopener">v—</a>
+        <span class="verbadge" id="verBadge">v—</span>
       </div>
       <div class="toolbar">
+        <button class="btn" id="btnOpen">開啟案件</button>
         <button class="btn" id="btnSave">儲存案件</button>
         <button class="btn" id="btnCopy">複製行程表</button>
         <button class="btn" id="btnWord">產生 Word 檔</button>
@@ -466,6 +470,28 @@ details.cfg .body{padding:14px 15px;border-top:1px solid var(--rule-soft)}
 <button class="fab" id="fbFab" type="button" aria-haspopup="dialog" aria-controls="fbPanel">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.6 3.6H4.6v16.8h11v-6.2"/><path d="M7.6 8.6h5.2M7.6 12.1h3.6"/><path d="m20.2 5.1 1.7 1.7-7.3 7.3-2.6.9.9-2.6z"/></svg><span>意見回饋</span>
 </button>
+<div class="fb-mask" id="ocMask" hidden></div>
+<div class="fb-panel oc-panel" id="ocPanel" role="dialog" aria-modal="true" aria-labelledby="ocTitle" hidden>
+  <div class="fb-head">
+    <h2 id="ocTitle">開啟案件</h2><span class="sp"></span>
+    <button class="fb-x" id="ocClose" type="button" aria-label="關閉">×</button>
+  </div>
+  <div class="fb-body">
+    <p class="fb-lede">輸入案件代號就好，例如 <b>jf20260903-a7b3k9</b>。整條案件連結貼進來也可以，會自己取出代號。</p>
+    <div class="fb-need" id="ocNeed" hidden>
+      <span>要先在上方填通行碼連線，才讀得到案件。</span>
+      <button class="btn" type="button" id="ocGoConnect">去填通行碼</button>
+    </div>
+    <div class="f"><label for="ocId">案件代號</label>
+      <input type="text" id="ocId" placeholder="jf20260903-a7b3k9" autocomplete="off" spellcheck="false"></div>
+    <p class="tiny" style="margin:9px 0 0">開啟之後會取代目前畫面上的行程。還沒存的內容，記得先按「儲存案件」。</p>
+  </div>
+  <div class="fb-foot">
+    <button class="btn btn-primary" id="ocGo" type="button">開啟</button>
+    <button class="btn" id="ocCancel" type="button">取消</button>
+    <span class="fb-msg" id="ocMsg"></span>
+  </div>
+</div>
 <div class="fb-mask" id="fbMask" hidden></div>
 <div class="fb-panel" id="fbPanel" role="dialog" aria-modal="true" aria-labelledby="fbTitle" hidden>
   <div class="fb-head">
@@ -1079,7 +1105,10 @@ async function gas(action,payload){
   const j=await res.json();
   if(!j.ok){
     const e=new Error(j.error||"服務回應異常");
-    if(action!=="err"){ e._logged=true; reportErr("後端",action,e.message); }
+    /* 後端標了 userError 的，是使用者自己輸入的問題（站碼打錯、通行碼、截圖太大…），
+       畫面照樣提示，但不進錯誤表——那裡只放真正影響使用的平台故障 */
+    if(action!=="err"&&!j.userError){ e._logged=true; reportErr("後端",action,e.message); }
+    if(j.userError) e._logged=true;
     throw e;
   }
   return j.data;
@@ -1169,8 +1198,7 @@ async function run(){
     });
     if(out.left.length){
       rep.push({bad:true,text:"有 "+out.left.length+" 個地點沒有任何一天可以放："+out.left.map(x=>P(x).name).join("、")+"，請先在「行程日期」補上日期"});
-      reportErr("排程","有地點排不進去",out.left.length+" 個地點沒有任何一天可以放",
-                out.left.map(x=>P(x).name).join("、"));
+      /* 不回報：這是使用者還沒補日期，畫面上已經指名道姓講清楚了，不是平台故障 */
     }
     /* 超時不再是「排不進去」，而是排完了但需要你決定怎麼縮（FB-006）。
        試算調整方式要重跑整個分天，成本高，所以只有真的超過「最晚結束」才跑 */
@@ -1180,8 +1208,8 @@ async function run(){
         "，時間軸與卡片已用紅色標示，可縮短停留、刪站或把站移到別天。"});
     }
     if(hardDays){
-      reportErr("排程","超過最晚結束時間",hardDays+" 天超過 "+CFG.endMax,
-                "共 "+days.length+" 天、"+rows.length+" 站");
+      /* 不回報：FB-006 之後「最晚結束」是軟性目標，超時是排完之後請使用者自己決定
+         怎麼縮的正常結果，不是故障。錯誤表只放真正影響使用的平台 bug */
       setStatus("試算可行的調整方式…",true); await sleep(0);
       const fixes=await suggestFix(days,ids);
       if(fixes.length){
@@ -1716,6 +1744,60 @@ function showCaseLink(){
   };
 }
 $("btnSave").onclick=async()=>{ if(await saveCase(false)) logUse("儲存案件"); };
+
+/* ---- 開啟案件 ----------------------------------------------------------
+   網址帶 ?case= 與工具列的「開啟案件」走同一條路徑，免得兩邊行為長歪。
+   使用者手上通常是整條連結，所以輸入框連結、代號都收，自己把代號挑出來。 */
+function caseIdFrom(v){
+  const raw=String(v||"").trim();
+  const m=raw.match(/[?&]case=([^&#\s]+)/);
+  let id=m?m[1]:raw;
+  try{ id=decodeURIComponent(id); }catch(_){}
+  return id.trim();
+}
+async function openCase(cid,fromUrl){
+  if(!cid) return {ok:false,error:"沒有案件代號"};
+  if(!hasBackend()){
+    setStatus("要開啟案件 "+cid+"，請先在設定填通行碼"); $("cfgBox").open=true;
+    return {ok:false,error:"要先在設定填通行碼才讀得到案件"};
+  }
+  setStatus("讀取案件 "+cid+"…",true);
+  try{
+    const r=await gas("loadCase",{id:cid});
+    restoreCase(JSON.parse(r.json||"{}"));
+    CASE_ID=cid; showCaseLink();
+    /* 從網址進來的本來就對了，不用再改一次 */
+    if(!fromUrl){ try{ history.replaceState(null,"",caseLink(cid)); }catch(_){} }
+    setStatus("已開啟案件："+(r.title||cid)); logUse("開啟案件");
+    return {ok:true};
+  }catch(e){ setStatus("開啟案件失敗："+e.message); return {ok:false,error:e.message}; }
+}
+function ocMsg(t,bad){ const m=$("ocMsg"); if(!m) return; m.textContent=t||""; m.classList.toggle("bad",!!bad); }
+function ocIsOpen(){ return !$("ocPanel").hidden; }
+function ocClose(){ $("ocMask").hidden=true; $("ocPanel").hidden=true; }
+function ocOpen(){
+  ocMsg(""); $("ocNeed").hidden=hasBackend();
+  $("ocId").value=CASE_ID||"";
+  $("ocMask").hidden=false; $("ocPanel").hidden=false;
+  setTimeout(()=>{ const i=$("ocId"); i.focus(); i.select(); },0);
+}
+$("btnOpen").onclick=ocOpen;
+$("ocClose").onclick=ocClose;
+$("ocCancel").onclick=ocClose;
+$("ocMask").onclick=ocClose;
+$("ocGoConnect").onclick=()=>{ ocClose(); $("cfgBox").open=true;
+  try{ $("cfgBox").scrollIntoView({behavior:"smooth",block:"start"}); }catch(_){} };
+$("ocId").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); $("ocGo").click(); } });
+$("ocGo").onclick=async()=>{
+  const id=caseIdFrom($("ocId").value);
+  if(!id){ ocMsg("請先輸入案件代號",true); $("ocId").focus(); return; }
+  if(!hasBackend()){ $("ocNeed").hidden=false; ocMsg("要先填通行碼才讀得到案件",true); return; }
+  const b=$("ocGo"); b.disabled=true; b.textContent="讀取中…"; ocMsg("");
+  const r=await openCase(id,false);
+  b.disabled=false; b.textContent="開啟";
+  if(r.ok) ocClose(); else ocMsg(r.error||"開啟失敗",true);
+};
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&ocIsOpen()) ocClose(); });
 
 /* Google 地圖路線連結：官方的 Maps URLs 格式，免金鑰，順序照我們排的走 */
 function mapsUrl(day){
@@ -2255,15 +2337,7 @@ bindCfg(); showUrl(); renderConnect(); renderDays(); renderPlaces(); updateInfo(
 if(hasBackend()){ loadTimetable(); errFlush(); }   /* 上次送不出去的錯誤，這次補送 */
 (async()=>{
   const cid=new URLSearchParams(location.search).get("case");
-  if(!cid) return;
-  if(!hasBackend()){ setStatus("要開啟案件 "+cid+"，請先在設定填通行碼"); $("cfgBox").open=true; return; }
-  setStatus("讀取案件 "+cid+"…",true);
-  try{
-    const r=await gas("loadCase",{id:cid});
-    restoreCase(JSON.parse(r.json||"{}"));
-    CASE_ID=cid; showCaseLink();
-    setStatus("已開啟案件："+(r.title||cid)); logUse("開啟案件");
-  }catch(e){ setStatus("開啟案件失敗："+e.message); }
+  if(cid) await openCase(cid,true);
 })();
 
 /* ==========================================================================
